@@ -7,17 +7,19 @@ int signal_received = 0;
 //SIGINT HANDLER (CTRL-C)
 void sigint_handler(int sig) {
 
-char yn;
- printf("Are you sure you want to terminate (Y/N)?");
- scanf(" %c", yn);
+  char  c;
 
- if(yn == 'y' || yn == 'Y'){
-   //TODO
+  printf("\nAre you sure you want to terminate (Y/N)?");
+  scanf(" %c", &c);
+
+  if (c == 'y' || c == 'Y')
+    exit(0);
+  else if (c == 'n' || c == 'N')
+    return;
+  else
+  //TODO: NAO PERMITIR OUTRO CARACTER
+    return;
  }
-
- return;
-
-}
 
 int main (int argc, char* argv[]){
 
@@ -26,8 +28,7 @@ int main (int argc, char* argv[]){
   action.sa_handler = sigint_handler;
   sigemptyset(&action.sa_mask);
   action.sa_flags = 0;
-  sigaction(SIGINT,&action,&orig_action);
-
+  sigaction(SIGINT,&action,NULL);
 
   char* fileName =NULL;
   char* type = NULL;
