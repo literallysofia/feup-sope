@@ -9,15 +9,17 @@ void sigint_handler(int sig) {
 
   char  c;
 
-  printf("\nAre you sure you want to terminate (Y/N)?");
+  printf("\n > Are you sure you want to terminate (Y/N)? ");
   scanf(" %c", &c);
 
   if (c == 'y' || c == 'Y')
     exit(0);
   else if (c == 'n' || c == 'N')
     return;
-  else
-  //TODO: NAO PERMITIR OUTRO CARACTER
+  else{
+    printf(" >> ERROR: Character not allowed!");
+    sigint_handler(SIGINT);
+  }
     return;
  }
 
@@ -70,6 +72,11 @@ int main (int argc, char* argv[]){
         continue;
     }
 
+  }
+
+  if(fileName==NULL){
+    printf(" >> ERROR: You didnt insert the name of the file you want to find!\n");
+    exit(0);
   }
 
   printf ("NAME: %s\n", fileName);
