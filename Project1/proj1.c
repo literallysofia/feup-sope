@@ -1,10 +1,88 @@
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <errno.h>
 
-int signal_received = 0;
+char* fileName =NULL;
+char* type = NULL;
+char* mode =NULL;
+char* command = NULL;
+char* toPrint = "NO";
+char* toDelete = "NO";
 
-//SIGINT HANDLER (CTRL-C)
+
+
+void process_files(struct dirent *direntp, struct stat stat_buf){
+
+  char *type;
+
+  if (S_ISREG(stat_buf.st_mode)) type = "f";
+
+  else if (S_ISDIR(stat_buf.st_mode)) {
+      type = "d";
+  }
+  else type = "l";
+
+  //mode (permissions)
+  int userPerm =0;
+  int grpPerm =0;
+  int othrPerm= 0;
+  int perm =0;
+
+
+  if(stat_buf.st_mode & S_IRUSR) userPerm+=4; //r
+  if(stat_buf.st_mode & S_IWUSR) userPerm+=2; //w
+  if(stat_buf.st_mode & S_IXUSR) userPerm+=1; //x
+  if(stat_buf.st_mode & S_IRGRP) grpPerm+=4; //r
+  if(stat_buf.st_mode & S_IWGRP) grpPerm+=2; //w
+  if(stat_buf.st_mode & S_IXGRP) grpPerm+=1; //x
+  if(stat_buf.st_mode & S_IROTH) othrPerm+=4; //r
+  if(stat_buf.st_mode & S_IWOTH) othrPerm+=2; //w
+  if(stat_buf.st_mode & S_IXOTH) othrPerm+=1; //x
+
+
+  perm=userPerm*100+grpPerm*10+othrPerm;
+
+
+  printf("NAME: %-15s  TYPE: %s  MODE: %d\n", direntp->d_name, type,perm);
+
+}
+
+void search_dirs(char* dirname){
+
+
+  DIR *dirp;
+  struct dirent *direntp;
+  struct stat stat_buf;
+  char name[200];
+
+  dirp = opendir(dirname);
+
+    while ((direntp = readdir(dirp)) != NULL)
+    {
+        sprintf(name,"%s/%s",dirname,direntp->d_name);
+
+        if (lstat(name, &stat_buf)==-1)
+        {
+            perror("lstat ERROR");
+            exit(3);
+        }
+
+        //type
+          if (S_ISREG(stat_buf.st_mode)) process_files(direntp,stat_buf);
+          else if (S_ISDIR(stat_buf.st_mode)) process_files(direntp,stat_buf); //TODO: fork para a recursividade
+          else process_files(direntp,stat_buf);
+
+      }
+
+    closedir(dirp);
+    return;
+}
+
+
 void sigint_handler(int sig) {
 
   char  c;
@@ -26,18 +104,11 @@ void sigint_handler(int sig) {
 int main (int argc, char* argv[]){
 
   //Handling signal
-  struct sigaction action, orig_action;
+  struct sigaction action;
   action.sa_handler = sigint_handler;
   sigemptyset(&action.sa_mask);
   action.sa_flags = 0;
   sigaction(SIGINT,&action,NULL);
-
-  char* fileName =NULL;
-  char* type = NULL;
-  char* mode =NULL;
-  char* command = NULL;
-  char* toPrint = "NO";
-  char* toDelete = "NO";
 
   int i;
   for (i = 1; i < argc; i++){
@@ -85,6 +156,10 @@ int main (int argc, char* argv[]){
   printf ("EXEC: %s\n", command);
   printf ("DELETE: %s\n", toDelete);
   printf ("PRINT: %s\n", toPrint);
+  printf("\n");
+
+  char* dirname ="TESTE_A"; //procura no dir onde o programa esta
+  search_dirs(dirname);
 
 
   //TODO: DELETE
