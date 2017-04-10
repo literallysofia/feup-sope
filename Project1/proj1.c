@@ -15,6 +15,7 @@ int mode = NULL;
 char* command = NULL;
 char* toPrint = "NO";
 char* toDelete = "NO";
+char* dir = NULL;
 
 void sigint_cHandler(int sig) //child handler
 {
@@ -94,7 +95,7 @@ void search_dirs(char* dirname) {
 		action.sa_flags = 0;
 		sigaction(SIGINT, &action, NULL);
 
-		printf(" > DIR: %s\n", dirname);
+		printf("\n > DIR: %s\n", dirname);
 
 		DIR *dirp;
 		struct dirent *direntp;
@@ -141,6 +142,8 @@ int main(int argc, char* argv[]) {
 	action.sa_flags = 0;
 	sigaction(SIGINT, &action, NULL);
 
+	dir= argv[1];
+
 	int i;
 	for (i = 1; i < argc; i++) {
 
@@ -175,22 +178,23 @@ int main(int argc, char* argv[]) {
 		}
 
 	}
-
+/*
 	if (fileName == NULL) {
 		printf(" >> ERROR: You didnt insert the name of the file you want to find!\n");
 		exit(0);
-	}
+	}*/
 
-	printf("NAME: %s\n", fileName);
-	printf("TYPE: %s\n", type);
-	printf("PERM: %i\n", mode);
-	printf("EXEC: %s\n", command);
+	printf("DIR:    %s\n", dir);
+	printf("NAME:   %s\n", fileName);
+	printf("TYPE:   %s\n", type);
+	printf("PERM:   %i\n", mode);
+	printf("EXEC:   %s\n", command);
 	printf("DELETE: %s\n", toDelete);
-	printf("PRINT: %s\n", toPrint);
+	printf("PRINT:  %s\n", toPrint);
 	printf("\n");
 
-	char* dirname = ".";
-	search_dirs(dirname);
+
+	search_dirs(dir);
 
 	//TODO: DELETE
 	for (;;) {}
