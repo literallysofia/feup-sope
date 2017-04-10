@@ -128,6 +128,7 @@ void search_dirs(char* dirname) {
 		}
 
 		closedir(dirp);
+		exit(0);
 	}
 
 	return;
