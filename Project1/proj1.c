@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 
-		if (strcmp(argv[i], "-mode") == 0) {
+		if (strcmp(argv[i], "-perm") == 0) {
 			fileMode = atoi(argv[i + 1]);
 			continue;
 		}
