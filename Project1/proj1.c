@@ -8,18 +8,16 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
+#include <errno.h>
 
-char* fileName = NULL;
-char* type = NULL;
-int mode = NULL;
-char* command = NULL;
+char* fileName = "";
+char* fileType = "";
+int fileMode = 0;
+char* command = "";
 char* toPrint = "NO";
 char* toDelete = "NO";
-char* dir = NULL;
-
-void sigint_cHandler(int sig) //child handler
-{
-}
+char* dir = "";
 
 void sigint_handler(int sig) { //main handler
 
@@ -39,9 +37,47 @@ void sigint_handler(int sig) { //main handler
 	return;
 }
 
-void process_files(struct dirent *direntp, struct stat stat_buf) {
+void fileAction(char* dirName, char* name) {
 
-	char *type;
+
+	if (strcmp(toPrint, "YES") == 0)
+		printf("%s\n", dirName);
+
+	if (strcmp(command, "") != 0)
+		execlp(command, command, dirName, NULL);
+
+	if (strcmp(toDelete, "YES") == 0)
+		remove(dirName);
+
+
+	return;
+}
+
+
+void verifyFile(char* dirName, char* name, char* type, int perm) {
+
+	int isNameValid = 1;
+	int isTypeValid = 1;
+	int isPermValid = 1;
+
+	if (strcmp(fileName, "") != 0 && strcmp(fileName, name) != 0)
+		isNameValid = 0;
+
+	if (strcmp(fileType, "") != 0 && strcmp(fileType, type) != 0)
+		isTypeValid = 0;
+
+	if (fileMode != 0 && fileMode != perm)
+		isPermValid = 0;
+
+	if (isNameValid && isTypeValid && isPermValid)
+		fileAction(dirName, name);
+
+	return;
+}
+
+void process_info(char* dirName, struct dirent *direntp, struct stat stat_buf) {
+
+	char* type;
 
 	//type
 	if (S_ISREG(stat_buf.st_mode)) type = "f";
@@ -71,8 +107,11 @@ void process_files(struct dirent *direntp, struct stat stat_buf) {
 
 	perm = userPerm * 100 + grpPerm * 10 + othrPerm;
 
+	verifyFile(dirName, direntp->d_name, type, perm);
 
-	printf("NAME: %-15s  TYPE: %s  MODE: %d\n", direntp->d_name, type, perm);
+	//printf("NAME: %-15s  TYPE: %s  MODE: %d\n", direntp->d_name, type, perm);
+
+	return;
 
 }
 
@@ -88,14 +127,7 @@ void search_dirs(char* dirname) {
 	}
 	else if (pid == 0) {
 
-		//Handling signal
-		struct sigaction action;
-		action.sa_handler = sigint_cHandler;
-		sigemptyset(&action.sa_mask);
-		action.sa_flags = 0;
-		sigaction(SIGINT, &action, NULL);
-
-		printf("\n > DIR: %s\n", dirname);
+		//printf("\n > DIR: %s\n", dirname);
 
 		DIR *dirp;
 		struct dirent *direntp;
@@ -115,20 +147,26 @@ void search_dirs(char* dirname) {
 			}
 
 			//type
-			if (S_ISREG(stat_buf.st_mode)) process_files(direntp, stat_buf);
+			if (S_ISREG(stat_buf.st_mode))
+				process_info(name, direntp, stat_buf);
 			else if (S_ISDIR(stat_buf.st_mode))
 			{
 				if (strcmp(direntp->d_name, ".") != 0 && strcmp(direntp->d_name, "..") != 0) {
-					process_files(direntp, stat_buf);
+					process_info(name, direntp, stat_buf);
 					search_dirs(name);
 				}
 			}
-			else process_files(direntp, stat_buf);
+			else process_info(name, direntp, stat_buf);
 
 		}
 
 		closedir(dirp);
 		exit(0);
+	}
+
+	else {
+		printf(" >> ERROR: Fork error.");
+		return;
 	}
 
 	return;
@@ -143,7 +181,7 @@ int main(int argc, char* argv[]) {
 	action.sa_flags = 0;
 	sigaction(SIGINT, &action, NULL);
 
-	dir= argv[1];
+	dir = argv[1];
 
 	int i;
 	for (i = 1; i < argc; i++) {
@@ -154,12 +192,12 @@ int main(int argc, char* argv[]) {
 		}
 
 		if (strcmp(argv[i], "-type") == 0) {
-			type = argv[i + 1];
+			fileType = argv[i + 1];
 			continue;
 		}
 
 		if (strcmp(argv[i], "-mode") == 0) {
-			mode = atoi(argv[i + 1]);
+			fileMode = atoi(argv[i + 1]);
 			continue;
 		}
 
@@ -179,26 +217,8 @@ int main(int argc, char* argv[]) {
 		}
 
 	}
-/*
-	if (fileName == NULL) {
-		printf(" >> ERROR: You didnt insert the name of the file you want to find!\n");
-		exit(0);
-	}*/
-
-	printf("DIR:    %s\n", dir);
-	printf("NAME:   %s\n", fileName);
-	printf("TYPE:   %s\n", type);
-	printf("PERM:   %i\n", mode);
-	printf("EXEC:   %s\n", command);
-	printf("DELETE: %s\n", toDelete);
-	printf("PRINT:  %s\n", toPrint);
-	printf("\n");
-
 
 	search_dirs(dir);
-
-	//TODO: DELETE
-	for (;;) {}
 
 	return 0;
 }
