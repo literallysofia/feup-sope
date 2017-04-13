@@ -1,0 +1,1 @@
+gcc -Wall -o sfind sfind.c
