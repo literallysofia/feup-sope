@@ -53,5 +53,5 @@ int main(int argc, char* argv[]) {
 	pthread_t tid1;
 	pthread_create(&tid1, NULL, gerarPedidos, NULL);
 
-	return 0;
+	pthread_exit(NULL);
 }
