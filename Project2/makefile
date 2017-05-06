@@ -1,5 +1,7 @@
 g:	gerador.c
-	gcc gerador.c -o g -D_REENTRANT -lpthread -Wall
+	gcc gerador.c -o gerador -D_REENTRANT -lpthread -Wall
+	gcc sauna.c -o sauna -D_REENTRANT -lpthread -Wall
 
 clean:
-	rm -f g
+	rm -f gerador
+	rm -f sauna

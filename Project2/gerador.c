@@ -3,9 +3,14 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/file.h>
+#include <string.h>
 
-int nPedidos;
-int maxUtil;
+int nPedidos; //numero de pedidos
+int maxUtil; //maxima utilizaçao em milisegundos
 
 struct Pedido{
 	int p; //numero
@@ -15,6 +20,16 @@ struct Pedido{
 
 void *gerarPedidos(void *arg)
 {
+	//Abrir FIFO de entrada
+	int fd;
+
+	fd=open("/tmp/entrada",O_WRONLY);
+	if (fd == -1) {
+		printf("> ERROR: Oops !!! Server is closed !!!\n"); //TODO: mudar mensagem
+		exit(1);
+	}
+
+	//Gerar pedidos
 	int i;
 	for(i = 1 ; i <= nPedidos; i++){
 		struct Pedido pedido;
@@ -31,17 +46,30 @@ void *gerarPedidos(void *arg)
 		int t = rand() % maxUtil+1;
 		pedido.t=t;
 
-		//TODO: mudar prinf para enviar por fifo
-		printf("P: %i - G: %c - T: %i\n", pedido.p, pedido.g, pedido.t);
+		//printf("P: %i;G: %c;T: %i;\n", pedido.p, pedido.g, pedido.t); //TODO: apagar
+
+		//Escrever no FIFO
+		int n;
+		char pedidoString[255];
+		n=sprintf(pedidoString, "P: %i;G: %c;T: %i;", pedido.p, pedido.g, pedido.t);
+		write(fd,pedidoString,n);
 	}
+
+	//Fechar FIFO de entrada
+	close(fd);
 
  	return NULL;
 }
 
 int main(int argc, char* argv[]) {
 
+	unlink("tmp/entrada"); //TODO: apagar
+
 	//Tratamento de argumentos
-	if (argc != 3) { printf(" > ERROR: The number of arguments is not correct!"); exit(1); }
+	if (argc != 3) {
+		 printf(" > ERROR: The number of arguments of %s is not correct!", argv[0]);
+		 exit(1);
+	 }
 
 	nPedidos = atoi(argv[1]);
 	maxUtil = atoi (argv[2]);
