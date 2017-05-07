@@ -20,16 +20,10 @@ struct Pedido{
 
 void *gerarPedidos(void *arg)
 {
-	//Abrir FIFO de entrada
-	int fd;
-
-	fd=open("/tmp/entrada",O_WRONLY);
-	if (fd == -1) {
-		printf("> ERROR: Oops !!! Server is closed !!!\n"); //TODO: mudar mensagem
-		exit(1);
-	}
 
 	//Gerar pedidos
+	struct Pedido pedidos[nPedidos]; //Array de Pedidos
+
 	int i;
 	for(i = 1 ; i <= nPedidos; i++){
 		struct Pedido pedido;
@@ -48,26 +42,66 @@ void *gerarPedidos(void *arg)
 
 		//printf("P: %i;G: %c;T: %i;\n", pedido.p, pedido.g, pedido.t); //TODO: apagar
 
-		//Escrever no FIFO
+		pedidos[i-1]=pedido;
+	}
+
+	///FIFO///
+
+	//Criar FIFO de entrada
+	if (mkfifo("/tmp/entrada",0660)<0){
+		if (errno==EEXIST)
+			printf(" > GERADOR: FIFO '/tmp/entrada' already exists\n");
+		else printf("> GERADOR: Can't create FIFO '/tmp/entrada'\n");
+	}
+	else printf(" > GERADOR: FIFO created.\n");
+
+	//Abrir FIFO de entrada
+	int fd_entrada;
+
+	fd_entrada=open("/tmp/entrada",O_WRONLY);
+	if (fd_entrada == -1) {
+		printf("> GERADOR: Oops !!! Server is closed !!!\n"); //TODO: mudar mensagem
+		exit(1);
+	}
+
+	printf(" > GERADOR: FIFO 'entrada' openned in WRITEONLY mode\n");
+
+	//Escrever no FIFO
+
+	int j;
+	for(j=0; j < nPedidos; j++){
 		int n;
 		char pedidoString[255];
-		n=sprintf(pedidoString, "P: %i;G: %c;T: %i;", pedido.p, pedido.g, pedido.t);
-		write(fd,pedidoString,n);
+
+		if(pedidos[j].p<10&&pedidos[j].t<10){
+			n=sprintf(pedidoString, "P:0%i-G:%c-T:0%i;", pedidos[j].p, pedidos[j].g, pedidos[j].t);
+		}
+		else if(pedidos[j].p<10){
+			n=sprintf(pedidoString, "P:0%i-G:%c-T:%i;", pedidos[j].p, pedidos[j].g, pedidos[j].t);
+		}
+		else if(pedidos[j].t<10){
+			n=sprintf(pedidoString, "P:%i-G:%c-T:0%i;", pedidos[j].p, pedidos[j].g, pedidos[j].t);
+		}
+
+		//n=sprintf(pedidoString, "P:%i-G:%c-T:%i;\n", pedidos[j].p, pedidos[j].g, pedidos[j].t);
+		write(fd_entrada,pedidoString,n);
 	}
 
 	//Fechar FIFO de entrada
-	close(fd);
+	close(fd_entrada);
 
+	/*if (unlink("/tmp/entrada")<0)
+    printf(" > GERADOR: Error when destroying FIFO '/tmp/entrada'\n");
+  else
+    printf(" > GERADOR: FIFO '/tmp/entrada' has been destroyed\n");*/
  	return NULL;
 }
 
 int main(int argc, char* argv[]) {
 
-	unlink("tmp/entrada"); //TODO: apagar
-
 	//Tratamento de argumentos
 	if (argc != 3) {
-		 printf(" > ERROR: The number of arguments of %s is not correct!", argv[0]);
+		 printf(" > GERADOR: The number of arguments of %s is not correct!", argv[0]);
 		 exit(1);
 	 }
 
@@ -82,4 +116,5 @@ int main(int argc, char* argv[]) {
 	pthread_create(&tid1, NULL, gerarPedidos, NULL);
 
 	pthread_exit(NULL);
+	return 0;
 }
