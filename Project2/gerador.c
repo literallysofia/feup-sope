@@ -70,10 +70,10 @@ void *gerarPedidos(void *arg)
 
 	int j;
 	for(j=0; j < nPedidos; j++){
-		int n;
+		//int n;
 		char pedidoString[255];
 
-		if(pedidos[j].p<10&&pedidos[j].t<10){
+		/*if(pedidos[j].p<10&&pedidos[j].t<10){
 			n=sprintf(pedidoString, "P:0%i-G:%c-T:0%i;", pedidos[j].p, pedidos[j].g, pedidos[j].t);
 		}
 		else if(pedidos[j].p<10){
@@ -81,10 +81,10 @@ void *gerarPedidos(void *arg)
 		}
 		else if(pedidos[j].t<10){
 			n=sprintf(pedidoString, "P:%i-G:%c-T:0%i;", pedidos[j].p, pedidos[j].g, pedidos[j].t);
-		}
+		}*/
 
-		//n=sprintf(pedidoString, "P:%i-G:%c-T:%i;\n", pedidos[j].p, pedidos[j].g, pedidos[j].t);
-		write(fd_entrada,pedidoString,n);
+		sprintf(pedidoString, "P:%i-G:%c-T:%i;\n", pedidos[j].p, pedidos[j].g, pedidos[j].t);
+		write(fd_entrada,pedidoString,20);
 	}
 
 	//Fechar FIFO de entrada

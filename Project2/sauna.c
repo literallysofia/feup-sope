@@ -40,9 +40,9 @@ int main(int argc, char* argv[]) {
   char str[12];
   int n=1;
   do{
-      n= read(fd_entrada, str, 14); //Não resulta se o tempo do pedido for maior que 99 :(
+      n= read(fd_entrada, str, 20);
       if(n!=0){
-        printf(" > SAUNA: %s\n", str);
+        printf(" > SAUNA: %s", str);
       }
   }while(n!=0);
 
