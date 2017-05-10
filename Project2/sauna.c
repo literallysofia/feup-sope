@@ -9,51 +9,54 @@
 #include <sys/file.h>
 #include <string.h>
 
-int nLugares; //numero de lugares na sauna
+int CAPACITY; //numero de lugares na sauna
+char* GENERATE_FIFO = "/tmp/entrada";
+char* REJECT_FIFO =  "/tmp/rejeitados";
+
+typedef struct {
+        int id; //numero do pedido
+        char gender; //genero
+        int duration; //duracao
+        int denials; //numero de rejeicoes
+} Request;
+
+Request* requestList[256]; //array de pedidos
 
 int main(int argc, char* argv[]) {
 
         //Tratamento de argumentos
+
         if (argc != 2) {
                 printf(" > SAUNA: The number of arguments of %s is not correct!", argv[0]);
                 exit(1);
         }
-        nLugares = atoi(argv[1]);
 
-        ///FIFO///
+        CAPACITY = atoi(argv[1]);
 
-        //Criar FIFO entrada
-        if (mkfifo("/tmp/entrada",0660) < 0) {
-                if (errno==EEXIST)
-                        printf(" > SAUNA: FIFO '/tmp/entrada' already exists\n");
-                else printf("> SAUNA: Can't create FIFO '/tmp/entrada'\n");
+        //FIFO
+
+        //abertura do FIFO
+
+        int fd_generator;
+        while ((fd_generator = open(GENERATE_FIFO, O_RDONLY)) == -1) {
+                if (errno == EEXIST)
+                        printf(" > SAUNA: FIFO 'entrada' doesnt exist! Retrying...\n");
+                sleep(1);
         }
-        else printf(" > SAUNA: FIFO created.\n");
 
-        //Abrir FIFO para leitura
-
-        int fd_entrada;
-        fd_entrada=open("/tmp/entrada",O_RDONLY);
         printf(" > SAUNA: FIFO 'entrada' openned in READONLY mode\n");
 
         //Ler pedidos do FIFO
-        char str[12];
-        int n=1;
-        do {
-                n= read(fd_entrada, str, 20);
-                if(n!=0) {
-                        printf(" > SAUNA: %s", str);
-                }
-        } while(n!=0);
 
-        //Fechar FIFO
-        close(fd_entrada);
+        Request *request = malloc(sizeof(Request));
 
-        //Remover FIFO
-        if (unlink("/tmp/entrada")<0)
-                printf(" > SAUNA: Error when destroying FIFO '/tmp/entrada'\n");
-        else
-                printf(" > SAUNA: FIFO '/tmp/entrada' has been destroyed\n");
+        while(read(fd_generator, request, sizeof(Request)) != 0) {
+                printf(" > SAUNA: P:%i-G:%c-T:%i;\n", request->id, request->gender, request->duration);
+        }
+
+        //fecha FIFO de entrada
+
+        close(fd_generator);
 
         exit(0);
 }
