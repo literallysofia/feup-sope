@@ -56,9 +56,8 @@ void *requestGenerator(void *arg) {
 
         int fd_generator;
 
-        if ((fd_generator = open(GENERATE_FIFO,O_WRONLY | O_NONBLOCK)) == -1) {
-                printf(" > GERADOR: Could not open fifo!\n"); //TODO: mudar mensagem
-                exit(1);
+        while ((fd_generator = open(GENERATE_FIFO,O_WRONLY | O_NONBLOCK)) == -1) {
+                perror("ERROR");
         }
 
         printf(" > GERADOR: FIFO 'entrada' openned in WRITEONLY mode\n");
@@ -69,11 +68,11 @@ void *requestGenerator(void *arg) {
         for(j = 0; j < NUM_REQUESTS; j++)
                 write(fd_generator, requestList[j], sizeof(Request));
 
-//fecha FIFO de entrada
+        //fecha FIFO de entrada
 
-        close(fd_generator);
+        //close(fd_generator);
 
-        return NULL;
+        pthread_exit(NULL);
 }
 
 int main(int argc, char* argv[]) {
@@ -97,8 +96,7 @@ int main(int argc, char* argv[]) {
         //Thread que escuta os pedidos rejeitados
         //  pthread_t tid2;
         //pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
-
-        pthread_exit(NULL);
+        pthread_join(tid1, NULL);
         unlink(GENERATE_FIFO);
 
         return 0;
