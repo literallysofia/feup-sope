@@ -8,6 +8,10 @@
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <string.h>
+#include <pthread.h>
+#include <time.h>
+
+FILE* balFile;
 
 int CAPACITY; //numero de lugares na sauna
 int NUM_REQUESTS; //numero de pedidos
@@ -15,6 +19,7 @@ int VALID_REQUESTS; //numero de pedidos validos
 int REJECTED_REQUESTS; //numero de pedidos rejeitados
 char* GENERATE_FIFO = "/tmp/entrada";
 char* REJECT_FIFO =  "/tmp/rejeitados";
+clock_t beginClock;
 
 typedef struct {
         int id; //numero do pedido
@@ -37,6 +42,16 @@ void printStats() {
 
 }
 
+void printFile(Request *request, char* tip){
+
+  clock_t  instClock = clock();
+
+  double inst= (double)(instClock - beginClock) / CLOCKS_PER_SEC;
+
+  fprintf(balFile, "%-6.5f - %-4d - %-20lu - %-4d: %-1c - %-4d - %-10s\n", inst, getpid(), pthread_self() ,request->id,request->gender, request->duration, tip);
+
+}
+
 int validateRequest(Request *request) {
 
         if(request->gender != ALLOWED_GENDER)
@@ -48,13 +63,20 @@ void manageRequests() {
 
         int i, j = 0, k = 0;
 
+        char* tip="";
+
         while(j < CAPACITY) {
 
                 for(i = 0; i < NUM_REQUESTS; i++) {
 
+                    tip="RECEBIDO";
+                    printFile(requestList[i], tip);
+
                         if(validRequests[0] == NULL) {
                                 ALLOWED_GENDER = requestList[i]->gender;
                                 validRequests[j] = requestList[i];
+                                tip="SERVIDO";
+                                printFile(requestList[i], tip);
                                 j++;
                         } else {
 
@@ -64,6 +86,8 @@ void manageRequests() {
                                 } else {
                                         requestList[i]->denials = requestList[i]->denials + 1;
                                         rejectedRequests[k] = requestList[i];
+                                        tip="REJEITADO";
+                                        printFile(requestList[i], tip);
                                         k++;
                                 }
                         }
@@ -150,6 +174,9 @@ void *requestReceptor(void *arg) {
 
 int main(int argc, char* argv[]) {
 
+        //Começo do clock
+        beginClock = clock();
+
         //Tratamento de argumentos
 
         if (argc != 2) {
@@ -164,10 +191,22 @@ int main(int argc, char* argv[]) {
         pthread_t tid1;
         pthread_create(&tid1, NULL, requestReceptor, NULL);
 
+        //Criaçao do ficheiro de registo
+        int pid;
+        pid = getpid();
+        char balPathname [20];
+        sprintf (balPathname, "/tmp/bal.%d", pid);
+        balFile=fopen(balPathname, "w");
+
+        if(balFile == NULL)
+          printf(" > SAUNA: Error opening balFile\n");
+
         //Thread que escuta os pedidos rejeitados
         //  pthread_t tid2;
         //pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
         pthread_join(tid1, NULL);
+        fclose(balFile);
+        //remove(balPathname);
         unlink(REJECT_FIFO);
         exit(0);
 }
