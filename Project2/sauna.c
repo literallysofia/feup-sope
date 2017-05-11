@@ -47,23 +47,28 @@ int validateRequest(Request *request) {
 void manageRequests() {
 
         int i, j = 0, k = 0;
-        for(i = 0; i < NUM_REQUESTS; i++) {
 
-                if(validRequests[0] == NULL) {
-                        ALLOWED_GENDER = requestList[i]->gender;
-                        validRequests[j] = requestList[i];
-                        j++;
-                } else {
+        while(j < CAPACITY) {
 
-                        if(validateRequest(requestList[i]) != 0) {
+                for(i = 0; i < NUM_REQUESTS; i++) {
+
+                        if(validRequests[0] == NULL) {
+                                ALLOWED_GENDER = requestList[i]->gender;
                                 validRequests[j] = requestList[i];
                                 j++;
                         } else {
-                                requestList[i]->denials = requestList[i]->denials + 1;
-                                rejectedRequests[k] = requestList[i];
-                                k++;
+
+                                if(validateRequest(requestList[i]) != 0) {
+                                        validRequests[j] = requestList[i];
+                                        j++;
+                                } else {
+                                        requestList[i]->denials = requestList[i]->denials + 1;
+                                        rejectedRequests[k] = requestList[i];
+                                        k++;
+                                }
                         }
                 }
+
         }
 
         VALID_REQUESTS = j;

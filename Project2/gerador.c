@@ -70,7 +70,7 @@ void *requestGenerator(void *arg) {
 
         //fecha FIFO de entrada
 
-        //close(fd_generator);
+        close(fd_generator);
 
         pthread_exit(NULL);
 }
