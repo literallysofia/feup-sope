@@ -46,9 +46,9 @@ void printFile(Request *request, char* tip){
 
   clock_t  instClock = clock();
 
-  double inst= (double)(instClock - beginClock) / CLOCKS_PER_SEC;
+  double inst= (double)(instClock - beginClock) / (CLOCKS_PER_SEC/1000);
 
-  fprintf(balFile, "%-6.5f - %-4d - %-20lu - %-4d: %-1c - %-4d - %-10s\n", inst, getpid(), pthread_self() ,request->id,request->gender, request->duration, tip);
+  fprintf(balFile, "%-6.2f - %-4d - %-20lu - %-4d: %-1c - %-4d - %-10s\n", inst, getpid(), pthread_self() ,request->id,request->gender, request->duration, tip);
 
 }
 
