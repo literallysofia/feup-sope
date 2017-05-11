@@ -87,7 +87,7 @@ void *requestReceptor(void *arg) {
                         printf(" > SAUNA: FIFO 'entrada' doesnt exist! Retrying...\n");
         }
 
-        printf(" > SAUNA: FIFO 'entrada' openned in READONLY mode\n");
+        printf(" > SAUNA: FIFO 'entrada' opened in READONLY mode\n");
 
         //Ler pedidos do FIFO de entrada
 
@@ -120,18 +120,18 @@ void *requestReceptor(void *arg) {
                         printf("> SAUNA: Can't create FIFO '/tmp/rejeitados'\n");
         }
         else
-                printf(" > SAUNA: FIFO created.\n");
+                printf(" > SAUNA: FIFO 'rejeitados' created.\n");
 
         //abertura FIFO de rejeitados
 
         int fd_reject;
 
-        if ((fd_reject = open(REJECT_FIFO,O_RDWR | O_NONBLOCK)) == -1) {
+        if ((fd_reject = open(REJECT_FIFO, O_WRONLY | O_NONBLOCK)) == -1) {
                 printf(" > SAUNA: Could not open fifo!\n"); //TODO: mudar mensagem
                 exit(1);
         }
 
-        printf(" > SAUNA: FIFO 'rejeitados' openned in READ and WRITE mode\n");
+        printf(" > SAUNA: FIFO 'rejeitados' opened in WRITEONLY mode\n");
 
         //escrita no FIFO
 

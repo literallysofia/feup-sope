@@ -50,17 +50,17 @@ void *requestGenerator(void *arg) {
                         printf("> GERADOR: Can't create FIFO '/tmp/entrada'\n");
         }
         else
-                printf(" > GERADOR: FIFO created.\n");
+                printf(" > GERADOR: FIFO 'entrada' created.\n");
 
         //abertura FIFO de entrada
 
         int fd_generator;
 
         while ((fd_generator = open(GENERATE_FIFO,O_WRONLY | O_NONBLOCK)) == -1) {
-                printf(" > GERADOR: Waiting for SAUNA to open...\n");
+                printf(" > GERADOR: Waiting for SAUNA to open 'entrada'...\n");
         }
 
-        printf(" > GERADOR: FIFO 'entrada' openned in WRITEONLY mode\n");
+        printf(" > GERADOR: FIFO 'entrada' opened in WRITEONLY mode\n");
 
         //escrita no FIFO
 
