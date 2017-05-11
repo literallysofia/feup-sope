@@ -112,7 +112,7 @@ void requestReceptor() {
                         printf(" > SAUNA: FIFO 'entrada' doesnt exist! Retrying...\n");
         }
 
-        printf(" > SAUNA: FIFO 'entrada' opened in READONLY mode\n");
+        printf(" > SAUNA: FIFO 'entrada' openned in READONLY mode\n");
 
         //Ler pedidos do FIFO de entrada
 
@@ -145,18 +145,18 @@ void requestReceptor() {
                         printf("> SAUNA: Can't create FIFO '/tmp/rejeitados'\n");
         }
         else
-                printf(" > SAUNA: FIFO 'rejeitados' created.\n");
+                printf(" > SAUNA: FIFO created.\n");
 
         //abertura FIFO de rejeitados
 
         int fd_reject;
 
-        if ((fd_reject = open(REJECT_FIFO, O_WRONLY | O_NONBLOCK)) == -1) {
+        if ((fd_reject = open(REJECT_FIFO,O_RDWR | O_NONBLOCK)) == -1) {
                 printf(" > SAUNA: Could not open fifo!\n"); //TODO: mudar mensagem
                 exit(1);
         }
 
-        printf(" > SAUNA: FIFO 'rejeitados' opened in WRITEONLY mode\n");
+        printf(" > SAUNA: FIFO 'rejeitados' openned in READ and WRITE mode\n");
 
         //escrita no FIFO
 
@@ -169,6 +169,7 @@ void requestReceptor() {
         close(fd_reject);
 
         printStats();
+
 }
 
 int main(int argc, char* argv[]) {
@@ -201,7 +202,6 @@ int main(int argc, char* argv[]) {
         //Thread que escuta os pedidos rejeitados
         //  pthread_t tid2;
         //pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
-
         fclose(balFile);
         //remove(balPathname);
         unlink(REJECT_FIFO);

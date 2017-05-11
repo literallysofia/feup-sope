@@ -9,10 +9,13 @@
 #include <sys/file.h>
 #include <string.h>
 
+FILE* gerFile;
+
 int NUM_REQUESTS; //numero de pedidos
 int MAX_TIME; //maxima utilizaçao em milisegundos
 char* GENERATE_FIFO = "/tmp/entrada";
 char* REJECT_FIFO =  "/tmp/rejeitados";
+clock_t beginClock;
 
 typedef struct {
         int id; //numero do pedido
@@ -22,6 +25,17 @@ typedef struct {
 } Request;
 
 Request* requestList[256]; //array de pedidos
+
+void printFile(Request *request, char* tip){
+
+  clock_t  instClock = clock();
+
+  double inst= (double)(instClock - beginClock) / (CLOCKS_PER_SEC/1000);
+
+  fprintf(gerFile, "%-6.2f - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst, getpid() ,request->id,request->gender, request->duration, tip);
+
+}
+
 
 void *requestGenerator(void *arg) {
 
@@ -63,10 +77,15 @@ void *requestGenerator(void *arg) {
         printf(" > GERADOR: FIFO 'entrada' opened in WRITEONLY mode\n");
 
         //escrita no FIFO
+        char* tip="";
 
         int j;
-        for(j = 0; j < NUM_REQUESTS; j++)
-                write(fd_generator, requestList[j], sizeof(Request));
+        for(j = 0; j < NUM_REQUESTS; j++){
+          write(fd_generator, requestList[j], sizeof(Request));
+          tip = "PEDIDO";
+          printFile(requestList[j], tip);
+        }
+
 
         //fecha FIFO de entrada
 
@@ -77,6 +96,9 @@ void *requestGenerator(void *arg) {
 
 int main(int argc, char* argv[]) {
 
+        //Começo do clock
+        beginClock = clock();
+
         //Tratamento de argumentos
         if (argc != 3) {
                 printf(" > GERADOR: The number of arguments of %s is not correct!", argv[0]);
@@ -85,6 +107,16 @@ int main(int argc, char* argv[]) {
 
         NUM_REQUESTS = atoi(argv[1]);
         MAX_TIME = atoi (argv[2]);
+
+        //Criaçao do ficheiro de registo
+        int pid;
+        pid = getpid();
+        char gerPathname [20];
+        sprintf (gerPathname, "/tmp/ger.%d", pid);
+        gerFile=fopen(gerPathname, "w");
+
+        if(gerFile == NULL)
+          printf(" > GERADOR: Error opening gerFile\n");
 
         //Para gerar numeros aleatorios ao longo do programa
         srand(time(NULL));
