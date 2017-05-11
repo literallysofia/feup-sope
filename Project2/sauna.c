@@ -48,7 +48,7 @@ void printFile(Request *request, char* tip){
 
   double inst= (double)(instClock - beginClock) / (CLOCKS_PER_SEC/1000);
 
-  fprintf(balFile, "%-6.2f - %-4d - %-20lu - %-4d: %-1c - %-4d - %-10s\n", inst, getpid(), pthread_self() ,request->id,request->gender, request->duration, tip);
+  fprintf(balFile, "%-6.2f - %-4d - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst, getpid(), getpid() ,request->id,request->gender, request->duration, tip);
 
 }
 
@@ -101,7 +101,8 @@ void manageRequests() {
         return;
 }
 
-void *requestReceptor(void *arg) {
+//void *requestReceptor(void *arg) {
+void requestReceptor() {
 
         //abertura do FIFO de entrada
 
@@ -168,8 +169,6 @@ void *requestReceptor(void *arg) {
         close(fd_reject);
 
         printStats();
-
-        pthread_exit(NULL);
 }
 
 int main(int argc, char* argv[]) {
@@ -187,10 +186,6 @@ int main(int argc, char* argv[]) {
         CAPACITY = atoi(argv[1]);
         NUM_REQUESTS = 0;
 
-        //Thread que analisa os pedidos do fifo de entrada
-        pthread_t tid1;
-        pthread_create(&tid1, NULL, requestReceptor, NULL);
-
         //Criaçao do ficheiro de registo
         int pid;
         pid = getpid();
@@ -201,10 +196,12 @@ int main(int argc, char* argv[]) {
         if(balFile == NULL)
           printf(" > SAUNA: Error opening balFile\n");
 
+        requestReceptor();
+
         //Thread que escuta os pedidos rejeitados
         //  pthread_t tid2;
         //pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
-        pthread_join(tid1, NULL);
+
         fclose(balFile);
         //remove(balPathname);
         unlink(REJECT_FIFO);
