@@ -57,7 +57,7 @@ void *requestGenerator(void *arg) {
         int fd_generator;
 
         while ((fd_generator = open(GENERATE_FIFO,O_WRONLY | O_NONBLOCK)) == -1) {
-                perror("ERROR");
+                printf(" > GERADOR: Waiting for SAUNA to open...\n");
         }
 
         printf(" > GERADOR: FIFO 'entrada' openned in WRITEONLY mode\n");
