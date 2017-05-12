@@ -17,6 +17,8 @@ int MAX_TIME;
 int ENTRADA_FIFO_FD;
 int REJEITADOS_FIFO_FD;
 
+clock_t beginClock;
+
 typedef struct {
         int id; //numero do pedido
         char gender; //genero
@@ -24,7 +26,11 @@ typedef struct {
         int denials; //numero de rejeicoes
 } Request;
 
-
+void printFile(Request *request, char* tip){
+  clock_t  instClock = clock();
+  double inst= (double)(instClock - beginClock) / (CLOCKS_PER_SEC/1000);
+  fprintf(gerFile, "%-6.2f - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst, getpid() ,request->id,request->gender, request->duration, tip);
+}
 
 void *escutarPedidosRejeitados(void *arg) {
 
@@ -34,7 +40,12 @@ void *escutarPedidosRejeitados(void *arg) {
 			if(request->id!=0){
 				if(request->id==-1) break;
 				printf(" > GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
-				if(request->denials<3) write(ENTRADA_FIFO_FD, request, sizeof(Request));
+				if(request->denials<3) {
+            printFile(request, "REJEITADO");
+            write(ENTRADA_FIFO_FD, request, sizeof(Request));
+        }
+        else printFile(request, "DESCARTADO");
+
 			}
     }
     pthread_exit(NULL);
@@ -55,6 +66,7 @@ void *requestGenerator(void *arg) {
 		request->denials = 0;
 
 		write(ENTRADA_FIFO_FD, request, sizeof(Request));
+    printFile(request, "PEDIDO");
 		printf(" > GERADOR (pedido):P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
 	}
 
@@ -95,6 +107,8 @@ void makeOpenEntradaFifo() {
 
 
 int main(int argc, char* argv[]) {
+
+  beginClock=clock();
 
 	//Para gerar numeros aleatorios ao longo do programa
 	srand(time(NULL));

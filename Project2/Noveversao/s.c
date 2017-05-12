@@ -12,6 +12,7 @@
 #include <time.h>
 
 FILE* balFile;
+clock_t beginClock;
 
 int CAPACITY;
 
@@ -33,6 +34,14 @@ typedef struct {
         int duration; //duracao
         int denials; //numero de rejeicoes
 } Request;
+
+void printFile(Request *request, char* tip){
+
+  clock_t  instClock = clock();
+  double inst= (double)(instClock - beginClock) / (CLOCKS_PER_SEC/1000);
+  fprintf(balFile, "%-6.2f - %-4d - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst, getpid(), getpid() ,request->id,request->gender, request->duration, tip);
+
+}
 
 
 void manageRejected(Request* request){
@@ -87,6 +96,7 @@ void manageRequest(Request* request){
                       printf(" > SAUNA (servido): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
                       NUM_PEOPLE_IN++;
                       id=request->id;
+                      printFile(request, "SERVIDO");
                       pthread_create(&threadsTid[threadPos], NULL, stayingInSauna,&request->duration);
                       threadPos++;
             } else {
@@ -94,10 +104,13 @@ void manageRequest(Request* request){
                           printf(" > SAUNA (servido): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
                           NUM_PEOPLE_IN++;
                           id=request->id;
+                          printFile(request, "SERVIDO");
                           pthread_create(&threadsTid[threadPos], NULL, stayingInSauna,&request->duration);
                           threadPos++;
                       } else {
+                          printFile(request, "REJEITADO");
                           manageRejected(request);
+
                       }
               }
   return;
@@ -111,6 +124,7 @@ void requestsReceptor() {
                 n=read(ENTRADA_FIFO_FD, request, sizeof(Request));
                 if(n>0){
                   printf(" > SAUNA REQUESTS TO READ: %d\n", REQUESTS_TO_READ);
+                  printFile(request, "RECEBIDO");
                   manageRequest(request);
                   REQUESTS_TO_READ--;
                 }
@@ -158,6 +172,8 @@ void makeOpenRejeitadosFifo() {
 
 
 int main(int argc, char* argv[]) {
+
+        beginClock=clock();
 
         //Tratamento de argumentos
 
