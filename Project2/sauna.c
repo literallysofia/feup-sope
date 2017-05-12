@@ -13,6 +13,8 @@
 
 FILE* balFile;
 
+int REQUESTS_TO_READ;
+
 int CAPACITY; //numero de lugares na sauna
 int NUM_REQUESTS; //numero de pedidos
 int VALID_REQUESTS; //numero de pedidos validos
@@ -151,12 +153,15 @@ void rejectedManager(){
   //escrita no FIFO
 
   int j;
-  for(j = 0; j < REJECTED_REQUESTS; j++)
-          write(fd_reject, rejectedRequests[j], sizeof(Request));
+  for(j = 0; j < REJECTED_REQUESTS; j++){
+    if(rejectedRequests[j]->denials<3) REQUESTS_TO_READ++;
+    write(fd_reject, rejectedRequests[j], sizeof(Request));
+  }
+
 
   //fecha FIFO de rejeitados
 
-  close(fd_reject);
+  //close(fd_reject);
 
   //requestReceptor();
 
@@ -176,14 +181,17 @@ void requestReceptor() {
         printf(" > SAUNA: FIFO 'entrada' openned in READONLY mode\n");
 
         //Ler pedidos do FIFO de entrada
+        read(fd_generator, &REQUESTS_TO_READ, sizeof(int));
+        printf(" > SAUNA: REQUESTS_TO_READ: %d\n", REQUESTS_TO_READ);
 
         Request *request = malloc(sizeof(Request));
         int i = 0;
 
         while(read(fd_generator, request, sizeof(Request)) != 0) {
                 requestList[i] = request;
-                //printf(" > SAUNA: P:%i-G:%c-T:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration);
+                printf(" > SAUNA: P:%i-G:%c-T:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration);
                 i++;
+                REQUESTS_TO_READ--;
                 request = malloc(sizeof(Request));
         }
 
@@ -191,7 +199,7 @@ void requestReceptor() {
 
         //fecha FIFO de entrada
 
-        close(fd_generator);
+        //close(fd_generator);
 
         manageRequests();
 

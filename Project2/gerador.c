@@ -10,7 +10,7 @@
 #include <string.h>
 
 FILE* gerFile;
-
+int REQUESTS_TO_READ;
 int NUM_REQUESTS; //numero de pedidos
 int MAX_TIME; //maxima utilizaçao em milisegundos
 char* GENERATE_FIFO = "/tmp/entrada";
@@ -38,7 +38,7 @@ void printFile(Request *request, char* tip){
 
 void *escutarPedidosRejeitados(void *arg) {
 
-    //abertura do FIFO de entrada
+    //abertura do FIFO de rejeitados
     int fd_reject;
     while ((fd_reject = open(REJECT_FIFO, O_RDONLY)) == -1) {
             if (errno == EEXIST)
@@ -47,6 +47,12 @@ void *escutarPedidosRejeitados(void *arg) {
 
     printf(" > GERADOR: FIFO 'rejeitados' openned in READONLY mode\n");
 
+    //abrir entrada
+    int fd_generator;
+
+    while ((fd_generator = open(GENERATE_FIFO,O_WRONLY | O_NONBLOCK)) == -1) {
+            printf(" > GERADOR: Waiting for SAUNA to open 'entrada'...\n");
+    }
 
     //Ler pedidos do FIFO de entrada
 
@@ -56,13 +62,14 @@ void *escutarPedidosRejeitados(void *arg) {
     while(read(fd_reject, request, sizeof(Request)) != 0) {
             requestList[i] = request;
             printf(" > GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration, requestList[i]->denials);
+            if(requestList[i]->denials<3) write(fd_generator, requestList[i], sizeof(Request));
             i++;
             request = malloc(sizeof(Request));
     }
 
     NUM_REQUESTS = i;
 
-    close(fd_reject);
+    //close(fd_reject);
 
     pthread_exit(NULL);
 
@@ -108,6 +115,9 @@ void *requestGenerator(void *arg) {
 
         printf(" > GERADOR: FIFO 'entrada' opened in WRITEONLY mode\n");
 
+
+        //escrever numero de pedidos
+        write(fd_generator, &REQUESTS_TO_READ, sizeof(int));
         //escrita no FIFO
         char* tip="";
 
@@ -122,7 +132,7 @@ void *requestGenerator(void *arg) {
 
         //fecha FIFO de entrada
 
-        close(fd_generator);
+        //close(fd_generator);
 
         pthread_exit(NULL);
 }
@@ -139,6 +149,7 @@ int main(int argc, char* argv[]) {
         }
 
         NUM_REQUESTS = atoi(argv[1]);
+        REQUESTS_TO_READ = atoi(argv[1]);
         MAX_TIME = atoi (argv[2]);
 
         //Criaçao do ficheiro de registo
