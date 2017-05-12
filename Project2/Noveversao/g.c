@@ -31,10 +31,11 @@ void *escutarPedidosRejeitados(void *arg) {
 		Request* request = malloc(sizeof(Request));
 
     while(read(REJEITADOS_FIFO_FD, request, sizeof(Request)) != 0) {
-						request = malloc(sizeof(Request));
-            printf(" > GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
-            if(request->denials<3) write(ENTRADA_FIFO_FD, request, sizeof(Request));
-
+			if(request->id!=0){
+				if(request->id==-1) break;
+				printf(" > GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
+				if(request->denials<3) write(ENTRADA_FIFO_FD, request, sizeof(Request));
+			}
     }
     pthread_exit(NULL);
 

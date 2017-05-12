@@ -22,6 +22,8 @@ int NUM_PEOPLE_IN =0;
 int ENTRADA_FIFO_FD;
 int REJEITADOS_FIFO_FD;
 
+int id;
+
 pthread_t *threadsTid;
 int threadPos = 0;
 
@@ -40,18 +42,29 @@ void manageRejected(Request* request){
     if(request->denials < 3)
       REQUESTS_TO_READ++;
 
+    printf(" > SAUNA (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
     write(REJEITADOS_FIFO_FD, request, sizeof(Request));
 }
 
 
 void *stayingInSauna(void *time) {
     threadPos--;
+    //int pos= threadPos;
+    int idlocal=id;
     int n = *(int *)time;
-    printf(" > SAUNA: thread %lu pos - %d time - %d\n",pthread_self(),threadPos, n);
+    printf(" > SAUNA: %d entrou\n",idlocal);
     sleep(n/1000);
     NUM_PEOPLE_IN--;
-    if(NUM_PEOPLE_IN==0) ALLOWED_GENDER = 'N';
-    printf(" > SAUNA: thread %lu pos -%d finished\n",threadsTid[threadPos], threadPos);
+
+    printf(" > SAUNA: %d saiu\n",idlocal);
+
+    printf(" > SAUNA PEOPLE IN SAUNA: %d\n", NUM_PEOPLE_IN);
+
+    if(NUM_PEOPLE_IN==0){
+      ALLOWED_GENDER = 'N';
+      printf(" > SAUNA: allowed gender: %c\n",ALLOWED_GENDER);
+    }
+
     pthread_exit(NULL);
 }
 
@@ -59,7 +72,7 @@ int validateRequest(Request *request) {
 
         if(request->gender != ALLOWED_GENDER)
                 return 0;
-        else if (NUM_PEOPLE_IN > CAPACITY)
+        else if (NUM_PEOPLE_IN >= CAPACITY)
                 return 0;
         else return 1;
 }
@@ -70,16 +83,17 @@ void manageRequest(Request* request){
 
             if(ALLOWED_GENDER=='N') {
                       ALLOWED_GENDER = request->gender;
-                      //REQUESTS_TO_READ--;
+                      printf(" > SAUNA: allowed gender: %c\n",ALLOWED_GENDER);
                       printf(" > SAUNA (servido): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
                       NUM_PEOPLE_IN++;
+                      id=request->id;
                       pthread_create(&threadsTid[threadPos], NULL, stayingInSauna,&request->duration);
                       threadPos++;
             } else {
                       if(validateRequest(request) != 0) {
-                          //REQUESTS_TO_READ--;
                           printf(" > SAUNA (servido): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
                           NUM_PEOPLE_IN++;
+                          id=request->id;
                           pthread_create(&threadsTid[threadPos], NULL, stayingInSauna,&request->duration);
                           threadPos++;
                       } else {
@@ -96,11 +110,15 @@ void requestsReceptor() {
                 request = malloc(sizeof(Request));
                 n=read(ENTRADA_FIFO_FD, request, sizeof(Request));
                 if(n>0){
+                  printf(" > SAUNA REQUESTS TO READ: %d\n", REQUESTS_TO_READ);
                   manageRequest(request);
                   REQUESTS_TO_READ--;
                 }
         }
         if(REQUESTS_TO_READ==0){
+          Request* request =malloc(sizeof(Request));
+          request->id=-1;
+          write(REJEITADOS_FIFO_FD,  request, sizeof(Request));
           close(REJEITADOS_FIFO_FD);
           close(ENTRADA_FIFO_FD);
         }
