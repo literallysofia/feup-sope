@@ -34,7 +34,7 @@ Request* rejectedRequests[256]; //array de pedidos validos
 
 char ALLOWED_GENDER;
 
-void printStats() {
+void printStats() { //TODO: change
 
         int i;
         for(i = 0; i < VALID_REQUESTS; i++)
@@ -52,9 +52,11 @@ void printFile(Request *request, char* tip){
 
 }
 
-int validateRequest(Request *request) {
+int validateRequest(Request *request, int j) {
 
         if(request->gender != ALLOWED_GENDER)
+                return 0;
+        else if ((j+1) > CAPACITY)
                 return 0;
         else return 1;
 }
@@ -65,40 +67,82 @@ void manageRequests() {
 
         char* tip="";
 
-        while(j < CAPACITY) {
+        for(i = 0; i < NUM_REQUESTS; i++) {
 
-                for(i = 0; i < NUM_REQUESTS; i++) {
+              tip="RECEBIDO";
+              printFile(requestList[i], tip);
 
-                    tip="RECEBIDO";
-                    printFile(requestList[i], tip);
+                  if(validRequests[0] == NULL) {
+                            ALLOWED_GENDER = requestList[i]->gender;
+                            validRequests[j] = requestList[i];
+                            printf(" > SAUNA (servido): P:%i-G:%c-T:%i-D:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration, requestList[i]->denials);
+                            tip="SERVIDO";
+                            printFile(requestList[i], tip);
+                            j++;
+                  } else {
 
-                        if(validRequests[0] == NULL) {
-                                ALLOWED_GENDER = requestList[i]->gender;
-                                validRequests[j] = requestList[i];
-                                tip="SERVIDO";
-                                printFile(requestList[i], tip);
-                                j++;
-                        } else {
-
-                                if(validateRequest(requestList[i]) != 0) {
-                                        validRequests[j] = requestList[i];
-                                        j++;
-                                } else {
-                                        requestList[i]->denials = requestList[i]->denials + 1;
-                                        rejectedRequests[k] = requestList[i];
-                                        tip="REJEITADO";
-                                        printFile(requestList[i], tip);
-                                        k++;
-                                }
-                        }
-                }
-
+                            if(validateRequest(requestList[i], j) != 0) {
+                                    validRequests[j] = requestList[i];
+                                    printf(" > SAUNA (servido): P:%i-G:%c-T:%i-D:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration, requestList[i]->denials);
+                                    tip="SERVIDO";
+                                    printFile(requestList[i], tip);
+                                    j++;
+                            } else {
+                                    requestList[i]->denials = requestList[i]->denials + 1;
+                                    rejectedRequests[k] = requestList[i];
+                                    tip="REJEITADO";
+                                    printFile(requestList[i], tip);
+                                    k++;
+                            }
+                    }
         }
+
 
         VALID_REQUESTS = j;
         REJECTED_REQUESTS = k;
 
         return;
+}
+void requestReceptor();
+
+void rejectedManager(){
+
+  //FIFO DE REJEITADOS
+
+  //criacao FIFO de rejeitados
+
+  if (mkfifo(REJECT_FIFO, S_IRUSR | S_IWUSR) != 0) {
+          if (errno == EEXIST)
+                  printf(" > SAUNA: FIFO '/tmp/rejeitados' already exists\n");
+          else
+                  printf("> SAUNA: Can't create FIFO '/tmp/rejeitados'\n");
+  }
+  else
+          printf(" > SAUNA: FIFO created.\n");
+
+  //abertura FIFO de rejeitados
+
+  int fd_reject;
+
+  if ((fd_reject = open(REJECT_FIFO,O_WRONLY  | O_NONBLOCK)) == -1) {
+          printf(" > SAUNA: Could not open fifo!\n"); //TODO: mudar mensagem
+          exit(1);
+  }
+
+  printf(" > SAUNA: FIFO 'rejeitados' openned in WRITE mode\n");
+
+  //escrita no FIFO
+
+  int j;
+  for(j = 0; j < REJECTED_REQUESTS; j++)
+          write(fd_reject, rejectedRequests[j], sizeof(Request));
+
+  //fecha FIFO de rejeitados
+
+  close(fd_reject);
+
+  requestReceptor();
+
 }
 
 //void *requestReceptor(void *arg) {
@@ -121,7 +165,7 @@ void requestReceptor() {
 
         while(read(fd_generator, request, sizeof(Request)) != 0) {
                 requestList[i] = request;
-                printf(" > SAUNA: P:%i-G:%c-T:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration);
+              //  printf(" > SAUNA: P:%i-G:%c-T:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration);
                 i++;
                 request = malloc(sizeof(Request));
         }
@@ -134,41 +178,8 @@ void requestReceptor() {
 
         manageRequests();
 
-        //FIFO DE REJEITADOS
+        rejectedManager();
 
-        //criacao FIFO de rejeitados
-
-        if (mkfifo(REJECT_FIFO, S_IRUSR | S_IWUSR) != 0) {
-                if (errno == EEXIST)
-                        printf(" > SAUNA: FIFO '/tmp/rejeitados' already exists\n");
-                else
-                        printf("> SAUNA: Can't create FIFO '/tmp/rejeitados'\n");
-        }
-        else
-                printf(" > SAUNA: FIFO created.\n");
-
-        //abertura FIFO de rejeitados
-
-        int fd_reject;
-
-        if ((fd_reject = open(REJECT_FIFO,O_RDWR | O_NONBLOCK)) == -1) {
-                printf(" > SAUNA: Could not open fifo!\n"); //TODO: mudar mensagem
-                exit(1);
-        }
-
-        printf(" > SAUNA: FIFO 'rejeitados' openned in READ and WRITE mode\n");
-
-        //escrita no FIFO
-
-        int j;
-        for(j = 0; j < REJECTED_REQUESTS; j++)
-                write(fd_reject, rejectedRequests[j], sizeof(Request));
-
-        //fecha FIFO de rejeitados
-
-        close(fd_reject);
-
-        printStats();
 
 }
 
@@ -200,10 +211,9 @@ int main(int argc, char* argv[]) {
         requestReceptor();
 
         //Thread que escuta os pedidos rejeitados
-        //  pthread_t tid2;
+        // pthread_t tid2;
         //pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
         fclose(balFile);
-        //remove(balPathname);
         unlink(REJECT_FIFO);
         exit(0);
 }

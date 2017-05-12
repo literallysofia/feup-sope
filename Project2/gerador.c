@@ -36,6 +36,38 @@ void printFile(Request *request, char* tip){
 
 }
 
+void *escutarPedidosRejeitados(void *arg) {
+
+    //abertura do FIFO de entrada
+    int fd_reject;
+    while ((fd_reject = open(REJECT_FIFO, O_RDONLY)) == -1) {
+            if (errno == EEXIST)
+                    printf(" > GENERADOR: FIFO 'rejeitados' doesnt exist! Retrying...\n");
+    }
+
+    printf(" > GENERADOR: FIFO 'rejeitados' openned in READONLY mode\n");
+
+
+    //Ler pedidos do FIFO de entrada
+
+    Request *request = malloc(sizeof(Request));
+    int i = NUM_REQUESTS;
+
+    while(read(fd_reject, request, sizeof(Request)) != 0) {
+            requestList[i] = request;
+            printf(" > GENERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration, requestList[i]->denials);
+            i++;
+            request = malloc(sizeof(Request));
+    }
+
+    NUM_REQUESTS = i;
+
+    close(fd_reject);
+
+    pthread_exit(NULL);
+
+}
+
 
 void *requestGenerator(void *arg) {
 
@@ -82,6 +114,7 @@ void *requestGenerator(void *arg) {
         int j;
         for(j = 0; j < NUM_REQUESTS; j++){
           write(fd_generator, requestList[j], sizeof(Request));
+          printf(" > GERADOR (pedido):P:%i-G:%c-T:%i-D:%i;\n", requestList[j]->id, requestList[j]->gender, requestList[j]->duration, requestList[j]->denials);
           tip = "PEDIDO";
           printFile(requestList[j], tip);
         }
@@ -126,9 +159,12 @@ int main(int argc, char* argv[]) {
         pthread_create(&tid1, NULL, requestGenerator, NULL);
 
         //Thread que escuta os pedidos rejeitados
-        //  pthread_t tid2;
-        //pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
+        pthread_t tid2;
+        pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
+
+
         pthread_join(tid1, NULL);
+        pthread_join(tid2, NULL);
         unlink(GENERATE_FIFO);
 
         return 0;
