@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+#include <sys/time.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -22,6 +23,8 @@ int NUM_PEOPLE_IN =0;
 
 int ENTRADA_FIFO_FD;
 int REJEITADOS_FIFO_FD;
+
+struct timeval begin;
 
 int id;
 
@@ -62,8 +65,10 @@ void printStats(){
 
 void printFile(Request *request, char* tip){
 
-  clock_t  instClock = clock();
-  double inst= (double)(instClock - beginClock) / (CLOCKS_PER_SEC/1000);
+  struct timeval end;
+  gettimeofday(&end, NULL);
+  double inst = (double)(end.tv_usec - begin.tv_usec)/1000;
+
   fprintf(balFile, "%-6.2f - %-4d - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst, getpid(), getpid() ,request->id,request->gender, request->duration, tip);
 
   if(request->gender=='M'){
@@ -132,16 +137,16 @@ void manageRequest(Request* request){
                       printf(". SAUNA (servido): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
                       NUM_PEOPLE_IN++;
                       id=request->id;
-                      printFile(request, "SERVIDO");
                       pthread_create(&threadsTid[threadPos], NULL, stayingInSauna,&request->duration);
+                      printFile(request, "SERVIDO");
                       threadPos++;
             } else {
                       if(validateRequest(request) != 0) {
                           printf(". SAUNA (servido): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
                           NUM_PEOPLE_IN++;
                           id=request->id;
-                          printFile(request, "SERVIDO");
                           pthread_create(&threadsTid[threadPos], NULL, stayingInSauna,&request->duration);
+                          printFile(request, "SERVIDO");
                           threadPos++;
                       } else {
                           printFile(request, "REJEITADO");
@@ -210,7 +215,7 @@ void makeOpenRejeitadosFifo() {
 
 int main(int argc, char* argv[]) {
 
-        beginClock=clock();
+        gettimeofday(&begin, NULL);
 
         //Tratamento de argumentos
 

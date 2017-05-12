@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+#include <sys/time.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -17,7 +18,7 @@ int MAX_TIME;
 int ENTRADA_FIFO_FD;
 int REJEITADOS_FIFO_FD;
 
-clock_t beginClock;
+struct timeval begin;
 
 int M_PEDIDOS=0;
 int M_REJEITADOS=0;
@@ -52,8 +53,11 @@ void printStats(){
 }
 
 void printFile(Request *request, char* tip){
-  clock_t  instClock = clock();
-  double inst= (double)(instClock - beginClock) / (CLOCKS_PER_SEC/1000);
+
+  struct timeval end;
+  gettimeofday(&end, NULL);
+  double inst = (double)(end.tv_usec - begin.tv_usec)/1000;
+
   fprintf(gerFile, "%-6.2f - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst, getpid() ,request->id,request->gender, request->duration, tip);
 
   if(request->gender=='M'){
@@ -146,7 +150,7 @@ void makeOpenEntradaFifo() {
 
 int main(int argc, char* argv[]) {
 
-  beginClock=clock();
+  gettimeofday(&begin, NULL);
 
 	//Para gerar numeros aleatorios ao longo do programa
 	srand(time(NULL));
