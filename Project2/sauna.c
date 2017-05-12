@@ -35,7 +35,7 @@ Request* requestList[256]; //array de pedidos
 Request* validRequests[256]; //array de pedidos validos
 Request* rejectedRequests[256]; //array de pedidos validos
 
-char ALLOWED_GENDER;
+char ALLOWED_GENDER = 'N';
 
 void printStats() { //TODO: change
 
@@ -69,6 +69,7 @@ void *stayingInSauna(void *time) {
     printf(" > SAUNA: thread %lu time - %d\n",pthread_self(), n);
     sleep(n/1000);
     threadFree--;
+    if(threadFree==0) ALLOWED_GENDER = 'N';
     pthread_exit(NULL);
 
 }
@@ -84,7 +85,7 @@ void manageRequests() {
               tip="RECEBIDO";
               printFile(requestList[i], tip);
 
-                  if(validRequests[0] == NULL) {
+                  if(ALLOWED_GENDER=='N') {
                             ALLOWED_GENDER = requestList[i]->gender;
                             validRequests[j] = requestList[i];
                             printf(" > SAUNA (servido): P:%i-G:%c-T:%i-D:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration, requestList[i]->denials);
