@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
+#include <sys/time.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -10,12 +11,21 @@
 #include <string.h>
 
 FILE* gerFile;
-int REQUESTS_TO_READ;
-int NUM_REQUESTS; //numero de pedidos
-int MAX_TIME; //maxima utilizaçao em milisegundos
-char* GENERATE_FIFO = "/tmp/entrada";
-char* REJECT_FIFO =  "/tmp/rejeitados";
-clock_t beginClock;
+
+int NUM_REQUESTS;
+int MAX_TIME;
+
+int ENTRADA_FIFO_FD;
+int REJEITADOS_FIFO_FD;
+
+struct timeval begin;
+
+int M_PEDIDOS=0;
+int M_REJEITADOS=0;
+int M_DESCARTADOS=0;
+int F_PEDIDOS=0;
+int F_REJEITADOS=0;
+int F_DESCARTADOS=0;
 
 typedef struct {
         int id; //numero do pedido
@@ -24,53 +34,62 @@ typedef struct {
         int denials; //numero de rejeicoes
 } Request;
 
-Request* requestList[256]; //array de pedidos
+void printStats(){
+
+    printf("[GERADOR PEDIDOS]\n");
+    printf(" > m: %d\n", M_PEDIDOS);
+    printf(" > f: %d\n", F_PEDIDOS);
+    printf(" > total: %d\n", M_PEDIDOS + F_PEDIDOS);
+
+    printf("[GERADOR REJEITADOS]\n");
+    printf(" > m: %d\n", M_REJEITADOS);
+    printf(" > f: %d\n", F_REJEITADOS);
+    printf(" > total: %d\n", M_REJEITADOS+ F_REJEITADOS);
+
+    printf("[GERADOR DESCARTADOS]\n");
+    printf(" > m: %d\n", M_DESCARTADOS);
+    printf(" > f: %d\n", F_DESCARTADOS);
+    printf(" > total: %d\n", M_DESCARTADOS + F_DESCARTADOS);
+}
 
 void printFile(Request *request, char* tip){
 
-  clock_t  instClock = clock();
-
-  double inst= (double)(instClock - beginClock) / (CLOCKS_PER_SEC/1000);
+  struct timeval end;
+  gettimeofday(&end, NULL);
+  double inst = (double)(end.tv_usec - begin.tv_usec)/1000;
 
   fprintf(gerFile, "%-6.2f - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst, getpid() ,request->id,request->gender, request->duration, tip);
+
+  if(request->gender=='M'){
+    if(strcmp(tip,"PEDIDO")==0) M_PEDIDOS++;
+    if(strcmp(tip,"REJEITADO")==0) M_REJEITADOS++;
+    if(strcmp(tip,"DESCARTADO")==0) M_DESCARTADOS++;
+  }
+  else{
+    if(strcmp(tip,"PEDIDO")==0) F_PEDIDOS++;
+    if(strcmp(tip,"REJEITADO")==0) F_REJEITADOS++;
+    if(strcmp(tip,"DESCARTADO")==0) F_DESCARTADOS++;
+  }
 
 }
 
 void *escutarPedidosRejeitados(void *arg) {
 
-    //abertura do FIFO de rejeitados
-    int fd_reject;
-    while ((fd_reject = open(REJECT_FIFO, O_RDONLY)) == -1) {
-            if (errno == EEXIST)
-                    printf(" > GERADOR: FIFO 'rejeitados' doesnt exist! Retrying...\n");
+		Request* request = malloc(sizeof(Request));
+
+    while(read(REJEITADOS_FIFO_FD, request, sizeof(Request)) != 0) {
+			if(request->id!=0){
+				if(request->id==-1) break;
+				printf(". GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
+				if(request->denials<3) {
+            printFile(request, "REJEITADO");
+            write(ENTRADA_FIFO_FD, request, sizeof(Request));
+        }
+        else printFile(request, "DESCARTADO");
+
+			}
     }
-
-    printf(" > GERADOR: FIFO 'rejeitados' openned in READONLY mode\n");
-
-    //abrir entrada
-    int fd_generator;
-
-    while ((fd_generator = open(GENERATE_FIFO,O_WRONLY | O_NONBLOCK)) == -1) {
-            printf(" > GERADOR: Waiting for SAUNA to open 'entrada'...\n");
-    }
-
-    //Ler pedidos do FIFO de entrada
-
-    Request *request = malloc(sizeof(Request));
-    int i = NUM_REQUESTS;
-
-    while(read(fd_reject, request, sizeof(Request)) != 0) {
-            requestList[i] = request;
-            printf(" > GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration, requestList[i]->denials);
-            if(requestList[i]->denials<3) write(fd_generator, requestList[i], sizeof(Request));
-            i++;
-            request = malloc(sizeof(Request));
-    }
-
-    NUM_REQUESTS = i;
-
-    //close(fd_reject);
-
+    printStats();
     pthread_exit(NULL);
 
 }
@@ -78,105 +97,105 @@ void *escutarPedidosRejeitados(void *arg) {
 
 void *requestGenerator(void *arg) {
 
-        //criacao de pedidos
+	//criacao de pedidos
 
-        int i;
-        for(i = 1; i <= NUM_REQUESTS; i++) {
+	int i;
+	for (i = 1; i <= NUM_REQUESTS; i++) {
+		Request *request = malloc(sizeof(Request));
+		request->id = i;
+		request->gender = (rand() % 2) ? 'M' : 'F';
+		request->duration = rand() % MAX_TIME + 1;
+		request->denials = 0;
 
-                Request *request = malloc(sizeof(Request));
-                request->id = i;
-                request->gender = (rand() % 2) ? 'M' : 'F';
-                request->duration = rand() % MAX_TIME + 1;
-                request->denials = 0;
+		write(ENTRADA_FIFO_FD, request, sizeof(Request));
+    printFile(request, "PEDIDO");
+		printf(". GERADOR (pedido):P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
+	}
 
-                requestList[i - 1] = request;
-        }
-
-        //FIFO
-
-        //criacao FIFO de entrada
-
-        if (mkfifo(GENERATE_FIFO, S_IRUSR | S_IWUSR) != 0) {
-                if (errno == EEXIST)
-                        printf(" > GERADOR: FIFO '/tmp/entrada' already exists\n");
-                else
-                        printf("> GERADOR: Can't create FIFO '/tmp/entrada'\n");
-        }
-        else
-                printf(" > GERADOR: FIFO 'entrada' created.\n");
-
-        //abertura FIFO de entrada
-
-        int fd_generator;
-
-        while ((fd_generator = open(GENERATE_FIFO,O_WRONLY | O_NONBLOCK)) == -1) {
-                printf(" > GERADOR: Waiting for SAUNA to open 'entrada'...\n");
-        }
-
-        printf(" > GERADOR: FIFO 'entrada' opened in WRITEONLY mode\n");
-
-
-        //escrever numero de pedidos
-        write(fd_generator, &REQUESTS_TO_READ, sizeof(int));
-        //escrita no FIFO
-        char* tip="";
-
-        int j;
-        for(j = 0; j < NUM_REQUESTS; j++){
-          write(fd_generator, requestList[j], sizeof(Request));
-          printf(" > GERADOR (pedido):P:%i-G:%c-T:%i-D:%i;\n", requestList[j]->id, requestList[j]->gender, requestList[j]->duration, requestList[j]->denials);
-          tip = "PEDIDO";
-          printFile(requestList[j], tip);
-        }
-
-
-        //fecha FIFO de entrada
-
-        //close(fd_generator);
-
-        pthread_exit(NULL);
+	pthread_exit(NULL);
 }
+
+void openRejeitadosFifo() {
+
+	while ((REJEITADOS_FIFO_FD = open("/tmp/rejeitados", O_RDONLY)) == -1) {
+		if (errno == EEXIST)
+			printf(". GERADOR: FIFO 'rejeitados' doesnt exist! Retrying...\n");
+	}
+
+	printf(". GERADOR: FIFO 'rejeitados' openned in READONLY mode\n");
+
+	return;
+
+}
+
+void makeOpenEntradaFifo() {
+	//criacao
+	if (mkfifo("/tmp/entrada", S_IRUSR | S_IWUSR) != 0) {
+		if (errno == EEXIST)
+			printf(". GERADOR: FIFO '/tmp/entrada' already exists\n");
+		else
+			printf(". GERADOR: Can't create FIFO '/tmp/entrada'\n");
+	}
+	else printf(". GERADOR: FIFO 'entrada' created.\n");
+
+	//abertura
+	while ((ENTRADA_FIFO_FD = open("/tmp/entrada", O_WRONLY | O_NONBLOCK)) == -1) {
+		printf(". GERADOR: Waiting for SAUNA to open 'entrada'...\n");
+	}
+	printf(". GERADOR: FIFO 'entrada' opened in WRITEONLY mode\n");
+
+	return;
+}
+
 
 int main(int argc, char* argv[]) {
 
-        //Começo do clock
-        beginClock = clock();
+  gettimeofday(&begin, NULL);
 
-        //Tratamento de argumentos
-        if (argc != 3) {
-                printf(" > GERADOR: The number of arguments of %s is not correct!", argv[0]);
-                exit(1);
-        }
+	//Para gerar numeros aleatorios ao longo do programa
+	srand(time(NULL));
 
-        NUM_REQUESTS = atoi(argv[1]);
-        REQUESTS_TO_READ = atoi(argv[1]);
-        MAX_TIME = atoi (argv[2]);
+	//Tratamento de argumentos
+	if (argc != 3) {
+		printf(". GERADOR: The number of arguments of %s is not correct!", argv[0]);
+		exit(1);
+	}
 
-        //Criaçao do ficheiro de registo
-        int pid;
-        pid = getpid();
-        char gerPathname [20];
-        sprintf (gerPathname, "/tmp/ger.%d", pid);
-        gerFile=fopen(gerPathname, "w");
+	NUM_REQUESTS = atoi(argv[1]);
+	MAX_TIME = atoi(argv[2]);
 
-        if(gerFile == NULL)
-          printf(" > GERADOR: Error opening gerFile\n");
+	//Criaçao do ficheiro de registo
+	int pid;
+	pid = getpid();
+	char gerPathname[20];
+	sprintf(gerPathname, "/tmp/ger.%d", pid);
+	gerFile = fopen(gerPathname, "w");
 
-        //Para gerar numeros aleatorios ao longo do programa
-        srand(time(NULL));
+	if (gerFile == NULL)
+		printf(". GERADOR: Error opening gerFile\n");
 
-        //Thread que gera pedidos aleatorios
-        pthread_t tid1;
-        pthread_create(&tid1, NULL, requestGenerator, NULL);
+	//Criação e abertura de FIFO de entrada
+	makeOpenEntradaFifo();
 
-        //Thread que escuta os pedidos rejeitados
-        pthread_t tid2;
-        pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
+	//Abertura FIFO rejeitados
+	openRejeitadosFifo();
+
+	//Escrever numero de pedidos
+	write(ENTRADA_FIFO_FD, &NUM_REQUESTS, sizeof(int));
+
+	//Thread que gera pedidos aleatorios
+	pthread_t tid1;
+	pthread_create(&tid1, NULL, requestGenerator, NULL);
+
+	//Thread que escuta os pedidos rejeitados
+	pthread_t tid2;
+	pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
 
 
-        pthread_join(tid1, NULL);
-        pthread_join(tid2, NULL);
-        unlink(GENERATE_FIFO);
+	pthread_join(tid1, NULL);
+	pthread_join(tid2, NULL);
 
-        return 0;
+	unlink("/tmp/entrada");
+
+	return 0;
 }

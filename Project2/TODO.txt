@@ -1,5 +1,0 @@
-- adicionar à struct pedido a variavel de quantas vezes foi rejeitado
-- ler decentemente os pedidos que chegam à sauna
-- fazer o FIFO de pedidos rejeitados
-- processar os pedidos na sauna
-- emitir mensagens de estatisticas do gerador e da sauna
