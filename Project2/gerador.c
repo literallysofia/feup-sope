@@ -42,10 +42,10 @@ void *escutarPedidosRejeitados(void *arg) {
     int fd_reject;
     while ((fd_reject = open(REJECT_FIFO, O_RDONLY)) == -1) {
             if (errno == EEXIST)
-                    printf(" > GENERADOR: FIFO 'rejeitados' doesnt exist! Retrying...\n");
+                    printf(" > GERADOR: FIFO 'rejeitados' doesnt exist! Retrying...\n");
     }
 
-    printf(" > GENERADOR: FIFO 'rejeitados' openned in READONLY mode\n");
+    printf(" > GERADOR: FIFO 'rejeitados' openned in READONLY mode\n");
 
 
     //Ler pedidos do FIFO de entrada
@@ -55,7 +55,7 @@ void *escutarPedidosRejeitados(void *arg) {
 
     while(read(fd_reject, request, sizeof(Request)) != 0) {
             requestList[i] = request;
-            printf(" > GENERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration, requestList[i]->denials);
+            printf(" > GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", requestList[i]->id, requestList[i]->gender, requestList[i]->duration, requestList[i]->denials);
             i++;
             request = malloc(sizeof(Request));
     }
