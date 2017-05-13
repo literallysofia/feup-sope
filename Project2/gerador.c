@@ -90,7 +90,6 @@ void *escutarPedidosRejeitados(void *arg) {
 
 			}
     }
-    printStats();
     pthread_exit(NULL);
 
 }
@@ -190,6 +189,7 @@ int main(int argc, char* argv[]) {
 
 	pthread_join(tid1, NULL);
 	pthread_join(tid2, NULL);
+  printStats();
 
 	unlink("/tmp/entrada");
 
