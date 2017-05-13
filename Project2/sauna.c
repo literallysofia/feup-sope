@@ -35,6 +35,8 @@ int F_SERVIDOS=0;
 int F_REJEITADOS=0;
 int F_RECEBIDOS=0;
 
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+
 typedef struct {
         int id; //numero do pedido
         char gender; //genero
@@ -104,7 +106,9 @@ void *stayingInSauna(void *arg) {
 
     printFile(request, pthread_self(),"SERVIDO");
 
+    pthread_mutex_lock(&mut);
     NUM_PEOPLE_IN--; //a pessoa sai
+    pthread_mutex_unlock(&mut);
 
     printf(". SAUNA: %d saiu\n",request->id);
 
@@ -114,6 +118,7 @@ void *stayingInSauna(void *arg) {
       ALLOWED_GENDER = 'X';
       printf(". SAUNA: allowed gender: %c\n",ALLOWED_GENDER);
     }
+
 
     pthread_exit(NULL);
 }
