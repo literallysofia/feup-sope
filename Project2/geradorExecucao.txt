@@ -1,3 +1,6 @@
- > Comando de invocacao:
- > Informacao de saida:
- > Registos:
+> Comando de invocacao: 
+	./gerador <n. pedidos> <max. utilização>
+> Informacao de saida:
+	-Consola: Estatistica
+	-Ficheiro ger.<pid>: toda a atividade do programa
+> Registos:

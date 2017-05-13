@@ -56,9 +56,9 @@ void printFile(Request *request, char* tip){
 
   struct timeval end; //struct que guarda a hora do instante pretendido
   gettimeofday(&end, NULL);
-  double inst = (double)(end.tv_usec - begin.tv_usec)/1000; //milissegundos depois do inicio do programa
+  double inst = (end.tv_sec - begin.tv_sec)*1000.0f + (end.tv_usec - begin.tv_usec) / 1000.0f; //milissegundos depois do inicio do programa
 
-  fprintf(gerFile, "%-6.2f - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst, getpid() ,request->id,request->gender, request->duration, tip);
+  fprintf(gerFile, "%-6.2f - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst/10, getpid() ,request->id,request->gender, request->duration, tip);
 
   if(request->gender=='M'){
     if(strcmp(tip,"PEDIDO")==0) M_PEDIDOS++;
