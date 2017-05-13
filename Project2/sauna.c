@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -61,32 +61,32 @@ void printStats(){
 
 void printFile(Request *request, int tid, char* tip){
 
-  struct timeval end; //struct que guarda a hora do instante pretendido
-  gettimeofday(&end, NULL);
-  double inst = (end.tv_sec - begin.tv_sec)*1000.0f + (end.tv_usec - begin.tv_usec) / 1000.0f; //milissegundos depois do inicio do programa
+        struct timeval end; //struct que guarda a hora do instante pretendido
+        gettimeofday(&end, NULL);
+        double inst = (end.tv_sec - begin.tv_sec)*1000.0f + (end.tv_usec - begin.tv_usec) / 1000.0f; //milissegundos depois do inicio do programa
 
-  fprintf(balFile, "%-9.2f - %-4d - %-12d - %-4d: %-1c - %-4d - %-10s\n", inst/10, getpid(), tid ,request->id,request->gender, request->duration, tip);
+        fprintf(balFile, "%-9.2f - %-4d - %-12d - %-4d: %-1c - %-4d - %-10s\n", inst/10, getpid(), tid,request->id,request->gender, request->duration, tip);
 
-  if(request->gender=='M'){
-    if(strcmp(tip,"REJEITADO")==0) M_REJEITADOS++;
-    if(strcmp(tip,"RECEBIDO")==0) M_RECEBIDOS++;
-    if(strcmp(tip,"SERVIDO")==0) M_SERVIDOS++;
-  }
-  else{
-    if(strcmp(tip,"REJEITADO")==0) F_REJEITADOS++;
-    if(strcmp(tip,"RECEBIDO")==0) F_RECEBIDOS++;
-    if(strcmp(tip,"SERVIDO")==0) F_SERVIDOS++;
-  }
+        if(request->gender=='M') {
+                if(strcmp(tip,"REJEITADO")==0) M_REJEITADOS++;
+                if(strcmp(tip,"RECEBIDO")==0) M_RECEBIDOS++;
+                if(strcmp(tip,"SERVIDO")==0) M_SERVIDOS++;
+        }
+        else{
+                if(strcmp(tip,"REJEITADO")==0) F_REJEITADOS++;
+                if(strcmp(tip,"RECEBIDO")==0) F_RECEBIDOS++;
+                if(strcmp(tip,"SERVIDO")==0) F_SERVIDOS++;
+        }
 
 }
 
 
 void manageRejected(Request* request){
 
-    request->denials = request->denials + 1;
+        request->denials = request->denials + 1;
 
-    if(request->denials < 3)
-      REQUESTS_TO_READ++; //como foi rejeitado menos que 3 vezes quer dizer que eventualmente vai chegar à sauna novamente
+        if(request->denials < 3)
+                REQUESTS_TO_READ++;  //como foi rejeitado menos que 3 vezes quer dizer que eventualmente vai chegar à sauna novamente
 
     //printf(". SAUNA (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
     write(REJEITADOS_FIFO_FD, request, sizeof(Request));
@@ -95,16 +95,16 @@ void manageRejected(Request* request){
 
 void *stayingInSauna(void *arg) {
 
-  Request *request = (Request*)arg;
+        Request *request = (Request*)arg;
 
     //printf(". SAUNA: %d entrou\n",request->id);
     sleep(request->duration/1000);
 
-    printFile(request, pthread_self(),"SERVIDO");
+        printFile(request, pthread_self(),"SERVIDO");
 
-    pthread_mutex_lock(&mut);
-    NUM_PEOPLE_IN--; //a pessoa sai
-    pthread_mutex_unlock(&mut);
+        pthread_mutex_lock(&mut);
+        NUM_PEOPLE_IN--; //a pessoa sai
+        pthread_mutex_unlock(&mut);
 
     //printf(". SAUNA: %d saiu\n",request->id);
 
@@ -116,7 +116,7 @@ void *stayingInSauna(void *arg) {
     }
 
 
-    pthread_exit(NULL);
+        pthread_exit(NULL);
 }
 
 int validateRequest(Request *request) {
@@ -155,6 +155,7 @@ void manageRequest(Request* request){
                       }
               }
   return;
+
 }
 
 void requestsReceptor() {
@@ -167,31 +168,33 @@ void requestsReceptor() {
                   //printf(". SAUNA REQUESTS TO READ: %d\n", REQUESTS_TO_READ);
                   manageRequest(request);
                   REQUESTS_TO_READ--; //um pedido foi lido, decrementar pedidos para ler
+
                 }
         }
-        if(REQUESTS_TO_READ==0){ //fim do pogramas
-          Request* request =malloc(sizeof(Request));
-          request->id=-1; //quando o gerador recebe um pedido com id -1, para de ler
-          write(REJEITADOS_FIFO_FD,  request, sizeof(Request));
-          close(REJEITADOS_FIFO_FD); //fechar fifo de rejeitados
-          close(ENTRADA_FIFO_FD); //fechar fifo de entrada
+        if(REQUESTS_TO_READ==0) { //fim do pogramas
+                Request* request =malloc(sizeof(Request));
+                request->id=-1; //quando o gerador recebe um pedido com id -1, para de ler
+                write(REJEITADOS_FIFO_FD,  request, sizeof(Request));
+                close(REJEITADOS_FIFO_FD); //fechar fifo de rejeitados
+                close(ENTRADA_FIFO_FD); //fechar fifo de entrada
         }
         return;
 }
 
 void openEntradaFifo() {
 
-	while ((ENTRADA_FIFO_FD = open("/tmp/entrada", O_RDONLY)) == -1) {
-		if (errno == EEXIST)
-			printf(". SAUNA: FIFO 'entrada' doesnt exist! Retrying...\n");
-	}
+        while ((ENTRADA_FIFO_FD = open("/tmp/entrada", O_RDONLY)) == -1) {
+                if (errno == EEXIST)
+                        printf(". SAUNA: FIFO 'entrada' doesnt exist! Retrying...\n");
+        }
 
 	//printf(". SAUNA: FIFO 'entrada' openned in READONLY mode\n");
 
-  return;
+        return;
 }
 
 void makeOpenRejeitadosFifo() {
+
 	//criacao
 	if (mkfifo("/tmp/rejeitados", S_IRUSR | S_IWUSR) != 0) {
 		if (errno == EEXIST)
@@ -233,7 +236,7 @@ int main(int argc, char* argv[]) {
         balFile=fopen(balPathname, "w");
 
         if(balFile == NULL)
-          printf(". SAUNA: Error opening balFile\n");
+                printf(". SAUNA: Error opening balFile\n");
 
         //Abertura FIFO rejeitados
         openEntradaFifo();
@@ -247,8 +250,8 @@ int main(int argc, char* argv[]) {
         requestsReceptor();
 
         int k;
-        for(k=0; k < 255; k++){
-          pthread_join(threadsTid[k], NULL); //espera pelas threads que estão a correr
+        for(k=0; k < 255; k++) {
+                pthread_join(threadsTid[k], NULL); //espera pelas threads que estão a correr
         }
 
         sleep(1);
