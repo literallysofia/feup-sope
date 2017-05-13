@@ -12,13 +12,13 @@
 
 FILE* gerFile;
 
-int NUM_REQUESTS;
-int MAX_TIME;
+int NUM_REQUESTS; //numero de pedidos gerados
+int MAX_TIME; //maximo tempo de utlização na sauna
 
-int ENTRADA_FIFO_FD;
-int REJEITADOS_FIFO_FD;
+int ENTRADA_FIFO_FD; //file descriptor do FIFO de entrada
+int REJEITADOS_FIFO_FD; //file descriptor do FIFO de rejeitados
 
-struct timeval begin;
+struct timeval begin; //struct que guarda a hora de inicio do programa
 
 int M_PEDIDOS=0;
 int M_REJEITADOS=0;
@@ -54,9 +54,9 @@ void printStats(){
 
 void printFile(Request *request, char* tip){
 
-  struct timeval end;
+  struct timeval end; //struct que guarda a hora do instante pretendido
   gettimeofday(&end, NULL);
-  double inst = (double)(end.tv_usec - begin.tv_usec)/1000;
+  double inst = (double)(end.tv_usec - begin.tv_usec)/1000; //milissegundos depois do inicio do programa
 
   fprintf(gerFile, "%-6.2f - %-4d - %-4d: %-1c - %-4d - %-10s\n", inst, getpid() ,request->id,request->gender, request->duration, tip);
 
@@ -78,12 +78,13 @@ void *escutarPedidosRejeitados(void *arg) {
 		Request* request = malloc(sizeof(Request));
 
     while(read(REJEITADOS_FIFO_FD, request, sizeof(Request)) != 0) {
-			if(request->id!=0){
-				if(request->id==-1) break;
+			if(request->id!=0){ // le se houver alguma coisa para ler
+				if(request->id==-1) break; //quando o id do pedido é -1, quer dizer que a sauna nao vai mandar mais pedidos
 				printf(". GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
 				if(request->denials<3) {
             printFile(request, "REJEITADO");
             write(ENTRADA_FIFO_FD, request, sizeof(Request));
+            printFile(request, "PEDIDO");
         }
         else printFile(request, "DESCARTADO");
 
@@ -96,8 +97,6 @@ void *escutarPedidosRejeitados(void *arg) {
 
 
 void *requestGenerator(void *arg) {
-
-	//criacao de pedidos
 
 	int i;
 	for (i = 1; i <= NUM_REQUESTS; i++) {
@@ -129,7 +128,7 @@ void openRejeitadosFifo() {
 }
 
 void makeOpenEntradaFifo() {
-	//criacao
+
 	if (mkfifo("/tmp/entrada", S_IRUSR | S_IWUSR) != 0) {
 		if (errno == EEXIST)
 			printf(". GERADOR: FIFO '/tmp/entrada' already exists\n");
@@ -138,7 +137,6 @@ void makeOpenEntradaFifo() {
 	}
 	else printf(". GERADOR: FIFO 'entrada' created.\n");
 
-	//abertura
 	while ((ENTRADA_FIFO_FD = open("/tmp/entrada", O_WRONLY | O_NONBLOCK)) == -1) {
 		printf(". GERADOR: Waiting for SAUNA to open 'entrada'...\n");
 	}
@@ -150,10 +148,9 @@ void makeOpenEntradaFifo() {
 
 int main(int argc, char* argv[]) {
 
-  gettimeofday(&begin, NULL);
+  gettimeofday(&begin, NULL); //guardar na struct a hora de inicio do programa
 
-	//Para gerar numeros aleatorios ao longo do programa
-	srand(time(NULL));
+	srand(time(NULL));//para gerar numeros aleatorios ao longo do programa
 
 	//Tratamento de argumentos
 	if (argc != 3) {
@@ -190,7 +187,6 @@ int main(int argc, char* argv[]) {
 	//Thread que escuta os pedidos rejeitados
 	pthread_t tid2;
 	pthread_create(&tid2, NULL, escutarPedidosRejeitados, NULL);
-
 
 	pthread_join(tid1, NULL);
 	pthread_join(tid2, NULL);
