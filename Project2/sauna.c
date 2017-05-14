@@ -11,7 +11,9 @@
 #include <string.h>
 #include <pthread.h>
 #include <time.h>
+#include <semaphore.h>
 
+sem_t empty;
 FILE* balFile;
 
 int CAPACITY; //capacidade  da sauna
@@ -97,16 +99,23 @@ void *stayingInSauna(void *arg) {
 
         Request *request = (Request*)arg;
 
-        //printf(". SAUNA: %d entrou\n",request->id);
+
+        //printf(". SAUNA: %d %c esta a espera\n",request->id, request->gender);
+
+        sem_wait(&empty);
+
+        // printf(". SAUNA: %d %c entrou\n",request->id, request->gender);
+
         usleep(request->duration*1000);
 
+        //printf(". SAUNA: %d %c saiu\n",request->id, request->gender);
         printFile(request, pthread_self(),"SERVIDO");
 
         pthread_mutex_lock(&mut);
         NUM_PEOPLE_IN--; //a pessoa sai
         pthread_mutex_unlock(&mut);
 
-        //printf(". SAUNA: %d saiu\n",request->id);
+        sem_post(&empty);
 
         //printf(". SAUNA: PEOPLE IN SAUNA: %d\n", NUM_PEOPLE_IN);
 
@@ -121,11 +130,13 @@ void *stayingInSauna(void *arg) {
 
 int validateRequest(Request *request) {
 
-        if(request->gender != ALLOWED_GENDER) //se o genero for diferente do correntemente na sauna
+        if(request->gender == ALLOWED_GENDER)
+                return 1;
+        else if(request->gender != ALLOWED_GENDER)
                 return 0;
-        else if (NUM_PEOPLE_IN >= CAPACITY) //se a sauna estiver cheia
-                return 0;
-        else return 1;
+
+        return 1;
+
 }
 
 
@@ -227,6 +238,7 @@ int main(int argc, char* argv[]) {
 
         CAPACITY = atoi(argv[1]);
 
+        sem_init(&empty, 0, CAPACITY);
 
         //Criaçao do ficheiro de registo
         int pid;
@@ -250,7 +262,7 @@ int main(int argc, char* argv[]) {
         requestsReceptor();
 
         int k;
-        for(k=0; k < 255; k++) {
+        for(k=0; k <= threadPos; k++) {
                 pthread_join(threadsTid[k], NULL); //espera pelas threads que estão a correr
         }
 
