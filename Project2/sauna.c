@@ -206,7 +206,7 @@ void makeOpenRejeitadosFifo() {
 
         //abertura
         while ((REJEITADOS_FIFO_FD = open("/tmp/rejeitados", O_WRONLY | O_NONBLOCK)) == -1) {
-                printf(". SAUNA: Waiting for SAUNA to open 'rejeitados'...\n");
+                printf(". SAUNA: Waiting for GERADOR to open 'rejeitados'...\n");
         }
         //printf(". SAUNA: FIFO 'rejeitados' opened in WRITEONLY mode\n");
 
