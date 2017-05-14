@@ -65,7 +65,7 @@ void printFile(Request *request, int tid, char* tip){
         gettimeofday(&end, NULL);
         double inst = (end.tv_sec - begin.tv_sec)*1000.0f + (end.tv_usec - begin.tv_usec) / 1000.0f; //milissegundos depois do inicio do programa
 
-        fprintf(balFile, "%-9.2f - %-4d - %-12d - %-4d: %-1c - %-4d - %-10s\n", inst/10, getpid(), tid,request->id,request->gender, request->duration, tip);
+        fprintf(balFile, "%-9.2f - %-4d - %-20lu - %-4d: %-1c - %-4d - %-10s\n", inst, getpid(), (long)tid,request->id,request->gender, request->duration, tip);
 
         if(request->gender=='M') {
                 if(strcmp(tip,"REJEITADO")==0) M_REJEITADOS++;
@@ -98,7 +98,7 @@ void *stayingInSauna(void *arg) {
         Request *request = (Request*)arg;
 
         //printf(". SAUNA: %d entrou\n",request->id);
-        sleep(request->duration/1000);
+        usleep(request->duration*1000);
 
         printFile(request, pthread_self(),"SERVIDO");
 
