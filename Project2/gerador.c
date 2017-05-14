@@ -36,17 +36,17 @@ typedef struct {
 
 void printStats(){
 
-    printf(" [GERADOR PEDIDOS    ] > m: %d\n", M_PEDIDOS);
-    printf(" [GERADOR PEDIDOS    ] > f: %d\n", F_PEDIDOS);
-    printf(" [GERADOR PEDIDOS    ] > total: %d\n", M_PEDIDOS + F_PEDIDOS);
+        printf(" [GERADOR PEDIDOS    ] > m: %d\n", M_PEDIDOS);
+        printf(" [GERADOR PEDIDOS    ] > f: %d\n", F_PEDIDOS);
+        printf(" [GERADOR PEDIDOS    ] > total: %d\n", M_PEDIDOS + F_PEDIDOS);
 
-    printf(" [GERADOR REJEITADOS ] > m: %d\n", M_REJEITADOS);
-    printf(" [GERADOR REJEITADOS ] > f: %d\n", F_REJEITADOS);
-    printf(" [GERADOR REJEITADOS ] > total: %d\n", M_REJEITADOS+ F_REJEITADOS);
+        printf(" [GERADOR REJEITADOS ] > m: %d\n", M_REJEITADOS);
+        printf(" [GERADOR REJEITADOS ] > f: %d\n", F_REJEITADOS);
+        printf(" [GERADOR REJEITADOS ] > total: %d\n", M_REJEITADOS+ F_REJEITADOS);
 
-    printf(" [GERADOR DESCARTADOS] > m: %d\n", M_DESCARTADOS);
-    printf(" [GERADOR DESCARTADOS] > f: %d\n", F_DESCARTADOS);
-    printf(" [GERADOR DESCARTADOS] > total: %d\n", M_DESCARTADOS + F_DESCARTADOS);
+        printf(" [GERADOR DESCARTADOS] > m: %d\n", M_DESCARTADOS);
+        printf(" [GERADOR DESCARTADOS] > f: %d\n", F_DESCARTADOS);
+        printf(" [GERADOR DESCARTADOS] > total: %d\n", M_DESCARTADOS + F_DESCARTADOS);
 }
 
 void printFile(Request *request, char* tip){
@@ -74,16 +74,16 @@ void *escutarPedidosRejeitados(void *arg) {
 
         Request* request = malloc(sizeof(Request));
 
-    while(read(REJEITADOS_FIFO_FD, request, sizeof(Request)) != 0) {
-			if(request->id!=0){ // le se houver alguma coisa para ler
-				if(request->id==-1) break; //quando o id do pedido é -1, quer dizer que a sauna nao vai mandar mais pedidos
-				//printf(". GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
-				if(request->denials<3) {
-            printFile(request, "REJEITADO");
-            write(ENTRADA_FIFO_FD, request, sizeof(Request));
-            printFile(request, "PEDIDO");
-        }
-        else printFile(request, "DESCARTADO");
+        while(read(REJEITADOS_FIFO_FD, request, sizeof(Request)) != 0) {
+                if(request->id!=0) { // le se houver alguma coisa para ler
+                        if(request->id==-1) break;  //quando o id do pedido é -1, quer dizer que a sauna nao vai mandar mais pedidos
+                        //printf(". GERADOR (rejeitado): P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
+                        if(request->denials<3) {
+                                printFile(request, "REJEITADO");
+                                write(ENTRADA_FIFO_FD, request, sizeof(Request));
+                                printFile(request, "PEDIDO");
+                        }
+                        else printFile(request, "DESCARTADO");
 
                 }
         }
@@ -93,18 +93,18 @@ void *escutarPedidosRejeitados(void *arg) {
 
 
 void *requestGenerator(void *arg) {
-	int i;
-	for (i = 1; i <= NUM_REQUESTS; i++) {
-		Request *request = malloc(sizeof(Request));
-		request->id = i;
-		request->gender = (rand() % 2) ? 'M' : 'F';
-		request->duration = rand() % MAX_TIME + 1;
-		request->denials = 0;
+        int i;
+        for (i = 1; i <= NUM_REQUESTS; i++) {
+                Request *request = malloc(sizeof(Request));
+                request->id = i;
+                request->gender = (rand() % 2) ? 'M' : 'F';
+                request->duration = rand() % MAX_TIME + 1;
+                request->denials = 0;
 
-		write(ENTRADA_FIFO_FD, request, sizeof(Request));
-    printFile(request, "PEDIDO");
-		//printf(". GERADOR (pedido):P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
-	}
+                write(ENTRADA_FIFO_FD, request, sizeof(Request));
+                printFile(request, "PEDIDO");
+                //printf(". GERADOR (pedido):P:%i-G:%c-T:%i-D:%i;\n", request->id, request->gender, request->duration, request->denials);
+        }
 
         pthread_exit(NULL);
 }
@@ -116,7 +116,7 @@ void openRejeitadosFifo() {
                         printf(". GERADOR: FIFO 'rejeitados' doesnt exist! Retrying...\n");
         }
 
-	//printf(". GERADOR: FIFO 'rejeitados' openned in READONLY mode\n");
+        //printf(". GERADOR: FIFO 'rejeitados' openned in READONLY mode\n");
 
         return;
 
@@ -124,18 +124,18 @@ void openRejeitadosFifo() {
 
 void makeOpenEntradaFifo() {
 
-	if (mkfifo("/tmp/entrada", S_IRUSR | S_IWUSR) != 0) {
-		if (errno == EEXIST)
-			printf(". GERADOR: FIFO '/tmp/entrada' already exists\n");
-		else
-			printf(". GERADOR: Can't create FIFO '/tmp/entrada'\n");
-	}
-	//else printf(". GERADOR: FIFO 'entrada' created.\n");
+        if (mkfifo("/tmp/entrada", S_IRUSR | S_IWUSR) != 0) {
+                if (errno == EEXIST)
+                        printf(". GERADOR: FIFO '/tmp/entrada' already exists\n");
+                else
+                        printf(". GERADOR: Can't create FIFO '/tmp/entrada'\n");
+        }
+        //else printf(". GERADOR: FIFO 'entrada' created.\n");
 
-	while ((ENTRADA_FIFO_FD = open("/tmp/entrada", O_WRONLY | O_NONBLOCK)) == -1) {
-		printf(". GERADOR: Waiting for SAUNA to open 'entrada'...\n");
-	}
-	//printf(". GERADOR: FIFO 'entrada' opened in WRITEONLY mode\n");
+        while ((ENTRADA_FIFO_FD = open("/tmp/entrada", O_WRONLY | O_NONBLOCK)) == -1) {
+                printf(". GERADOR: Waiting for SAUNA to open 'entrada'...\n");
+        }
+        //printf(". GERADOR: FIFO 'entrada' opened in WRITEONLY mode\n");
 
         return;
 }
